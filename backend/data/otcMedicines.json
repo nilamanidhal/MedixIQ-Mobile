@@ -1,0 +1,173 @@
+{
+  "Fever & Pain Relief": [
+    {
+      "name": "Paracetamol (Acetaminophen)",
+      "brandExamples": ["Crocin", "Calpol", "Tylenol"],
+      "usage": "Used for mild to moderate fever or pain relief.",
+      "dosage": "Usually 500–1000 mg every 6 hours after meals if needed.",
+      "notes": "Avoid exceeding 4 grams per day. Use with caution in liver disease."
+    },
+    {
+      "name": "Ibuprofen",
+      "brandExamples": ["Brufen", "Advil", "Motrin"],
+      "usage": "Relieves headache, muscle pain, toothache, menstrual cramps, and fever.",
+      "dosage": "200–400 mg every 6–8 hours after food.",
+      "notes": "Avoid on an empty stomach. Not recommended in stomach ulcers or kidney disease."
+    },
+    {
+      "name": "Aspirin (Low Dose)",
+      "brandExamples": ["Disprin", "Ecospirin"],
+      "usage": "Used occasionally for pain or fever.",
+      "dosage": "300–600 mg every 4–6 hours with water.",
+      "notes": "Avoid in children and people with ulcers or bleeding risk."
+    }
+  ],
+
+  "Cold, Cough & Allergy": [
+    {
+      "name": "Cetirizine",
+      "brandExamples": ["Cetzine", "Zyrtec"],
+      "usage": "Relieves sneezing, runny nose, and allergies.",
+      "dosage": "5–10 mg once daily, preferably at night.",
+      "notes": "May cause mild drowsiness in some people."
+    },
+    {
+      "name": "Loratadine",
+      "brandExamples": ["Claritin", "Lorfast"],
+      "usage": "Used for seasonal allergies and hay fever.",
+      "dosage": "10 mg once daily.",
+      "notes": "Non-drowsy antihistamine."
+    },
+    {
+      "name": "Diphenhydramine",
+      "brandExamples": ["Benadryl", "Corex-D"],
+      "usage": "Used for dry cough or allergy-related symptoms.",
+      "dosage": "25–50 mg every 6 hours as needed.",
+      "notes": "Can cause drowsiness. Avoid driving after taking."
+    },
+    {
+      "name": "Dextromethorphan",
+      "brandExamples": ["Tussin", "Robitussin-DM"],
+      "usage": "Suppresses dry cough.",
+      "dosage": "10–20 mg every 4 hours as needed.",
+      "notes": "Do not use with MAOIs or in persistent productive cough."
+    },
+    {
+      "name": "Phenylephrine",
+      "brandExamples": ["Sinarest", "Sudafed PE"],
+      "usage": "Reduces nasal congestion.",
+      "dosage": "10 mg every 4 hours as needed.",
+      "notes": "Avoid in high blood pressure or heart disease."
+    }
+  ],
+
+  "Digestive Issues": [
+    {
+      "name": "Oral Rehydration Salts (ORS)",
+      "brandExamples": ["Electral", "Pedialyte"],
+      "usage": "Prevents dehydration from diarrhea or heat.",
+      "dosage": "Mix in clean water; sip frequently.",
+      "notes": "Safe for most people, including children."
+    },
+    {
+      "name": "Domperidone",
+      "brandExamples": ["Motilium", "Domstal"],
+      "usage": "Helps with nausea and vomiting.",
+      "dosage": "10 mg before meals, up to 3 times daily.",
+      "notes": "Avoid long-term use or in heart rhythm disorders."
+    },
+    {
+      "name": "Simethicone",
+      "brandExamples": ["Gas-X", "Digene Gel"],
+      "usage": "Relieves gas and bloating.",
+      "dosage": "40–125 mg after meals and at bedtime.",
+      "notes": "Generally well tolerated."
+    },
+    {
+      "name": "Loperamide",
+      "brandExamples": ["Imodium"],
+      "usage": "Controls loose motions (diarrhea).",
+      "dosage": "2 mg after each loose stool (max 8 mg/day).",
+      "notes": "Avoid if high fever or bloody stools present."
+    },
+    {
+      "name": "Pantoprazole",
+      "brandExamples": ["Pantocid", "Protonix"],
+      "usage": "Reduces acid reflux and heartburn.",
+      "dosage": "40 mg once daily before breakfast.",
+      "notes": "Consult a doctor if symptoms persist for more than 2 weeks."
+    }
+  ],
+
+  "Skin & Minor Injuries": [
+    {
+      "name": "Calamine Lotion",
+      "brandExamples": ["Caladryl", "Calamine-Zn"],
+      "usage": "Soothes itchy or irritated skin.",
+      "dosage": "Apply thin layer 2–3 times daily.",
+      "notes": "For external use only."
+    },
+    {
+      "name": "Povidone Iodine Ointment",
+      "brandExamples": ["Betadine", "Cipladine"],
+      "usage": "Used to disinfect minor cuts and wounds.",
+      "dosage": "Apply gently after cleaning the area.",
+      "notes": "Avoid using on deep wounds without supervision."
+    },
+    {
+      "name": "Hydrocortisone Cream (1%)",
+      "brandExamples": ["Cortizone-10"],
+      "usage": "Used for mild skin irritation, itching, or rashes.",
+      "dosage": "Apply thinly twice daily for up to 7 days.",
+      "notes": "Do not apply on broken or infected skin."
+    },
+    {
+      "name": "Aloe Vera Gel",
+      "brandExamples": ["Patanjali Aloe Gel", "Banana Boat"],
+      "usage": "Soothes mild burns or sunburns.",
+      "dosage": "Apply as needed.",
+      "notes": "For external use only."
+    }
+  ],
+
+  "Cold & Flu Combo Packs": [
+    {
+      "name": "Sinarest Tablet",
+      "composition": ["Paracetamol", "Chlorpheniramine", "Phenylephrine"],
+      "usage": "Relieves headache, nasal congestion, and cold symptoms.",
+      "dosage": "One tablet every 8 hours after meals.",
+      "notes": "Avoid driving if drowsy. Not for children below 12 years."
+    },
+    {
+      "name": "D-Cold Total",
+      "composition": ["Paracetamol", "Phenylephrine", "Chlorpheniramine"],
+      "usage": "Used for cold, fever, and nasal congestion.",
+      "dosage": "One tablet every 8 hours after food.",
+      "notes": "Avoid if hypertensive or with thyroid problems."
+    }
+  ],
+
+  "General Supplements": [
+    {
+      "name": "Vitamin C (Ascorbic Acid)",
+      "brandExamples": ["Limcee", "Celin"],
+      "usage": "Boosts immunity and helps in recovery from cold.",
+      "dosage": "500 mg once daily after meals.",
+      "notes": "Safe for short-term use."
+    },
+    {
+      "name": "Multivitamin Tablets",
+      "brandExamples": ["Supradyn", "Revital", "Centrum"],
+      "usage": "Supports general health and energy levels.",
+      "dosage": "One tablet daily after meals.",
+      "notes": "Avoid overdosing; not a substitute for balanced diet."
+    },
+    {
+      "name": "Zinc Supplement",
+      "brandExamples": ["Zincovit", "Shelcal-Z"],
+      "usage": "Supports immune function and healing.",
+      "dosage": "One tablet daily after food.",
+      "notes": "Do not exceed recommended dose."
+    }
+  ]
+}

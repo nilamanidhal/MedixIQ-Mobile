@@ -1,0 +1,6 @@
+{
+  "appId": "com.medmind.app",
+  "appName": "medmind",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}
