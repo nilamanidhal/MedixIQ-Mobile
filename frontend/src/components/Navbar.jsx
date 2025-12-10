@@ -5,7 +5,7 @@ const Navbar = () => {
   const { user, logout } = useAuth();
 
   return (
-    <nav className="bg-blue-600 text-white shadow-lg">
+    <nav className="bg-green-400 text-white shadow-lg pt-3">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">

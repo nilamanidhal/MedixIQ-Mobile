@@ -2,5 +2,8 @@
   "appId": "com.medmind.app",
   "appName": "medmind",
   "webDir": "dist",
-  "bundledWebRuntime": false
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
 }

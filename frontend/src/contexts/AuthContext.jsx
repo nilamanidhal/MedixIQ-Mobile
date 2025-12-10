@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { Network } from '@capacitor/network';
 
 const AuthContext = createContext();
 
@@ -12,79 +13,126 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
-    const [token, setToken] = useState(localStorage.getItem('token'));
-    const [loading, setLoading] = useState(true);
+    // 1. INITIALIZE STATE FROM LOCAL STORAGE (Instant Offline Access)
+    const [user, setUser] = useState(() => {
+        const savedUser = localStorage.getItem('user_data');
+        return savedUser ? JSON.parse(savedUser) : null;
+    });
+    
+    const [token, setToken] = useState(() => localStorage.getItem('token') || null);
+    
+    // We start loading as FALSE because we trust the local storage first.
+    // This allows the app to render the Dashboard immediately even if offline.
+    const [loading, setLoading] = useState(false);
 
-    // Use the environment variable for the API base URL
-    const API_BASE_URL = import.meta.env.VITE_API_URL;
+    // Use environment variable, fallback to your specific local IP if needed for testing
+    const API_BASE_URL = import.meta.env.VITE_API_URL || "http://192.168.1.5:5000/api"; 
     axios.defaults.baseURL = API_BASE_URL;
 
-    // This effect runs whenever the token changes and sets the default auth header for all future axios requests
+    // 2. TOKEN & HEADER MANAGEMENT
     useEffect(() => {
         if (token) {
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            fetchUserProfile();
+            // Try to refresh user data in background, but don't block UI
+            validateSession();
         } else {
             delete axios.defaults.headers.common['Authorization'];
-            setLoading(false);
         }
     }, [token]);
 
-    const fetchUserProfile = async () => {
+    // 3. SMART SESSION VALIDATION
+    const validateSession = async () => {
+        const status = await Network.getStatus();
+        
+        // Only try to fetch profile if we have internet
+        if (status.connected) {
+            try {
+                const response = await axios.get('/auth/profile');
+                const updatedUser = response.data.user;
+                
+                // Update local storage with fresh data
+                setUser(updatedUser);
+                localStorage.setItem('user_data', JSON.stringify(updatedUser));
+                
+            } catch (error) {
+                console.error('Session validation check:', error);
+                
+                // CRITICAL: Only logout if the server explicitly says "Unauthorized" (401).
+                // If it's a network error (status 0) or server error (500), KEEP THE USER LOGGED IN.
+                if (error.response && error.response.status === 401) {
+                    logout();
+                }
+            }
+        } else {
+            console.log("Offline: Skipping session validation, trusting local data.");
+        }
+    };
+
+    // 4. LOGIN
+    const login = async (email, password) => {
+        setLoading(true);
         try {
-            const response = await axios.get('/auth/profile');
-            setUser(response.data.user);
+            const response = await axios.post('/auth/login', { email, password });
+            const { token, user } = response.data;
+            
+            // Save to Local Storage
+            localStorage.setItem('token', token);
+            localStorage.setItem('user_data', JSON.stringify(user));
+            
+            // Update State
+            setToken(token);
+            setUser(user);
+            return { success: true };
         } catch (error) {
-            console.error('Error fetching user profile:', error);
-            logout(); // If profile fetch fails, the token is likely invalid, so log out
+            return { success: false, message: error.response?.data?.message || 'Network error' };
         } finally {
             setLoading(false);
         }
     };
 
-    const login = async (email, password) => {
-        try {
-            const response = await axios.post('/auth/login', { email, password });
-            const { token, user } = response.data;
-            localStorage.setItem('token', token);
-            setToken(token);
-            setUser(user);
-            return { success: true };
-        } catch (error) {
-            return { success: false, message: error.response?.data?.message || 'Network error' };
-        }
-    };
-
+    // 5. REGISTER
     const register = async (userData) => {
+        setLoading(true);
         try {
             const response = await axios.post('/auth/register', userData);
             const { token, user } = response.data;
+
             localStorage.setItem('token', token);
+            localStorage.setItem('user_data', JSON.stringify(user));
+            
             setToken(token);
             setUser(user);
             return { success: true };
         } catch (error) {
             return { success: false, message: error.response?.data?.message || 'Network error' };
+        } finally {
+            setLoading(false);
         }
     };
 
+    // 6. LOGOUT
     const logout = () => {
         localStorage.removeItem('token');
+        localStorage.removeItem('user_data');
         setToken(null);
         setUser(null);
+        // Optional: clear any other offline queues here if you want security over convenience
     };
     
+    // 7. UPDATE PROFILE
     const updateProfile = async (profileData) => {
         try {
             const response = await axios.put('/auth/profile', profileData);
-            setUser(response.data.user);
+            const updatedUser = response.data.user;
+            
+            setUser(updatedUser);
+            localStorage.setItem('user_data', JSON.stringify(updatedUser));
+            
             return { success: true };
         } catch (error) {
             return { success: false, message: error.response?.data?.message || 'Network error' };
         }
     };
-
 
     const value = {
         user,
@@ -97,7 +145,8 @@ export const AuthProvider = ({ children }) => {
         API_BASE_URL,
     };
 
-    return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
+    // We removed the "!loading &&" check so children render immediately based on local data
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 
@@ -109,148 +158,104 @@ export const AuthProvider = ({ children }) => {
 
 
 
-
 // import React, { createContext, useContext, useState, useEffect } from 'react';
+// import axios from 'axios';
 
 // const AuthContext = createContext();
 
 // export const useAuth = () => {
-//   const context = useContext(AuthContext);
-//   if (!context) {
-//     throw new Error('useAuth must be used within an AuthProvider');
-//   }
-//   return context;
+//     const context = useContext(AuthContext);
+//     if (!context) {
+//         throw new Error('useAuth must be used within an AuthProvider');
+//     }
+//     return context;
 // };
 
 // export const AuthProvider = ({ children }) => {
-//   const [user, setUser] = useState(null);
-//   const [token, setToken] = useState(localStorage.getItem('token'));
-//   const [loading, setLoading] = useState(true);
+//     const [user, setUser] = useState(null);
+//     const [token, setToken] = useState(localStorage.getItem('token'));
+//     const [loading, setLoading] = useState(true);
 
-//   // const API_BASE_URL = 'http://localhost:5000/api';  //Devlopment mode
-//   const API_BASE_URL = 'https://medmind-qnpv.onrender.com/api'; // Deployment mode
+//     // Use the environment variable for the API base URL
+//     const API_BASE_URL = import.meta.env.VITE_API_URL;
+//     axios.defaults.baseURL = API_BASE_URL;
 
-//   useEffect(() => {
-//     if (token) {
-//       fetchUserProfile();
-//     } else {
-//       setLoading(false);
-//     }
-//   }, [token]);
+//     // This effect runs whenever the token changes and sets the default auth header for all future axios requests
+//     useEffect(() => {
+//         if (token) {
+//             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+//             fetchUserProfile();
+//         } else {
+//             delete axios.defaults.headers.common['Authorization'];
+//             setLoading(false);
+//         }
+//     }, [token]);
 
-//   const fetchUserProfile = async () => {
-//     try {
-//       const response = await fetch(`${API_BASE_URL}/auth/profile`, {
-//         headers: {
-//           'Authorization': `Bearer ${token}`,
-//           'Content-Type': 'application/json',
-//         },
-//       });
+//     const fetchUserProfile = async () => {
+//         try {
+//             const response = await axios.get('/auth/profile');
+//             setUser(response.data.user);
+//         } catch (error) {
+//             console.error('Error fetching user profile:', error);
+//             logout(); // If profile fetch fails, the token is likely invalid, so log out
+//         } finally {
+//             setLoading(false);
+//         }
+//     };
 
-//       if (response.ok) {
-//         const data = await response.json();
-//         setUser(data.user);
-//       } else {
-//         logout();
-//       }
-//     } catch (error) {
-//       console.error('Error fetching user profile:', error);
-//       logout();
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
+//     const login = async (email, password) => {
+//         try {
+//             const response = await axios.post('/auth/login', { email, password });
+//             const { token, user } = response.data;
+//             localStorage.setItem('token', token);
+//             setToken(token);
+//             setUser(user);
+//             return { success: true };
+//         } catch (error) {
+//             return { success: false, message: error.response?.data?.message || 'Network error' };
+//         }
+//     };
 
-//   const login = async (email, password) => {
-//     try {
-//       const response = await fetch(`${API_BASE_URL}/auth/login`, {
-//         method: 'POST',
-//         headers: {
-//           'Content-Type': 'application/json',
-//         },
-//         body: JSON.stringify({ email, password }),
-//       });
+//     const register = async (userData) => {
+//         try {
+//             const response = await axios.post('/auth/register', userData);
+//             const { token, user } = response.data;
+//             localStorage.setItem('token', token);
+//             setToken(token);
+//             setUser(user);
+//             return { success: true };
+//         } catch (error) {
+//             return { success: false, message: error.response?.data?.message || 'Network error' };
+//         }
+//     };
 
-//       const data = await response.json();
+//     const logout = () => {
+//         localStorage.removeItem('token');
+//         setToken(null);
+//         setUser(null);
+//     };
+    
+//     const updateProfile = async (profileData) => {
+//         try {
+//             const response = await axios.put('/auth/profile', profileData);
+//             setUser(response.data.user);
+//             return { success: true };
+//         } catch (error) {
+//             return { success: false, message: error.response?.data?.message || 'Network error' };
+//         }
+//     };
 
-//       if (response.ok) {
-//         localStorage.setItem('token', data.token);
-//         setToken(data.token);
-//         setUser(data.user);
-//         return { success: true };
-//       } else {
-//         return { success: false, message: data.message };
-//       }
-//     } catch (error) {
-//       return { success: false, message: 'Network error. Please try again.' };
-//     }
-//   };
 
-//   const register = async (userData) => {
-//     try {
-//       const response = await fetch(`${API_BASE_URL}/auth/register`, {
-//         method: 'POST',
-//         headers: {
-//           'Content-Type': 'application/json',
-//         },
-//         body: JSON.stringify(userData),
-//       });
+//     const value = {
+//         user,
+//         token,
+//         loading,
+//         login,
+//         register,
+//         logout,
+//         updateProfile,
+//         API_BASE_URL,
+//     };
 
-//       const data = await response.json();
-
-//       if (response.ok) {
-//         localStorage.setItem('token', data.token);
-//         setToken(data.token);
-//         setUser(data.user);
-//         return { success: true };
-//       } else {
-//         return { success: false, message: data.message };
-//       }
-//     } catch (error) {
-//       return { success: false, message: 'Network error. Please try again.' };
-//     }
-//   };
-
-//   const logout = () => {
-//     localStorage.removeItem('token');
-//     setToken(null);
-//     setUser(null);
-//   };
-
-//   const updateProfile = async (profileData) => {
-//     try {
-//       const response = await fetch(`${API_BASE_URL}/auth/profile`, {
-//         method: 'PUT',
-//         headers: {
-//           'Authorization': `Bearer ${token}`,
-//           'Content-Type': 'application/json',
-//         },
-//         body: JSON.stringify(profileData),
-//       });
-
-//       const data = await response.json();
-
-//       if (response.ok) {
-//         setUser(data.user);
-//         return { success: true };
-//       } else {
-//         return { success: false, message: data.message };
-//       }
-//     } catch (error) {
-//       return { success: false, message: 'Network error. Please try again.' };
-//     }
-//   };
-
-//   const value = {
-//     user,
-//     token,
-//     loading,
-//     login,
-//     register,
-//     logout,
-//     updateProfile,
-//     API_BASE_URL,
-//   };
-
-//   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+//     return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
 // };

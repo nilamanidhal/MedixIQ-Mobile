@@ -5,6 +5,8 @@ import { useMedicines } from '../hooks/useMedicines';
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
+// import { AndroidSettings, IOSSettings, NativeSettings } from 'capacitor-native-settings'; // Optional if you have a settings plugin,
+
 // --- FIXED IMPORTS START HERE ---
 // 1. Medicines are in the sibling 'medicines' folder
 import MedicineForm from './medicines/MedicineForm';
@@ -23,7 +25,8 @@ import AiChatbot from './AiChatbot';
 
 const Dashboard = () => {
     const { user } = useAuth();
-    const { syncOfflineData } = useMedicines(); 
+    const { syncOfflineData, lastSyncTime } = useMedicines();
+    // const { syncOfflineData } = useMedicines(); 
 
     const {
         permission,
@@ -40,10 +43,14 @@ const Dashboard = () => {
         syncOfflineData();
 
         const checkPerms = async () => {
-            if (permission !== 'granted') {
-                console.log("Notification permission not yet granted.");
-            } else {
+            const perm = await LocalNotifications.checkPermissions();
+            
+            if (perm.display === 'granted') {
                 setNotificationStatus("Notifications Active ✅");
+            } else {
+                console.log("Notification permission not yet granted. Requesting now...");
+                // Requesting this usually triggers the "Exact Alarm" prompt on Android 12+
+                await LocalNotifications.requestPermissions();
             }
         };
         checkPerms();
@@ -186,9 +193,35 @@ const Dashboard = () => {
 
     const renderDashboardHome = () => (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-            <div className="mb-8">
+            {/* <div className="mb-8">
                 <h1 className="text-4xl font-bold text-gray-900 mb-3">Welcome, {user?.name}! 👋</h1>
                 <p className="text-xl text-gray-600">Manage your health and medications effectively with MediMind (Mobile)</p>
+            </div> */}
+
+            {/* STATUS CARD */}
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-8">
+                <div className="flex justify-between items-center mb-2">
+                    <div>
+                        <h3 className="text-green-900 font-bold">{notificationStatus || "Checking Permissions..."}</h3>
+                        <p className="text-green-700 text-sm">Your phone will ring for scheduled medicines.</p>
+                    </div>
+                    <div className="flex flex-col space-y-2">
+                        <button 
+                            onClick={handleEnableNotifications}
+                            className="bg-blue-600 text-white px-4 py-2 rounded text-sm shadow hover:bg-blue-700"
+                        >
+                            Check Permissions
+                        </button>
+                    </div>
+                </div>
+                
+                {/* NEW: Last Sync Indicator */}
+                <div className="flex justify-between items-center pt-2 border-t border-green-200 text-xs text-green-700 font-medium">
+                    <span>☁️ Cloud Sync: {lastSyncTime ? new Date(lastSyncTime).toLocaleString() : 'Waiting...'}</span>
+                    <button onClick={() => syncOfflineData()} className="underline hover:text-green-900">
+                        Sync Now
+                    </button>
+                </div>
             </div>
 
             {permission !== 'granted' ? (
@@ -222,14 +255,14 @@ const Dashboard = () => {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                <div onClick={() => setCurrentPage('active-medicines')} className="group bg-white rounded-xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105 hover:border-pink-300">
                    <div className="text-center">
-                       <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                       <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
                            <span className="text-white text-3xl">💊</span>
                        </div>
                        <h3 className="text-xl font-bold text-gray-900 mb-2">Active Medicines</h3>
-                       <p className="text-gray-600">Track your current medications</p>
+                       {/* <p className="text-gray-600">Track your current medications</p> */}
                    </div>
                </div>
                <div onClick={() => setCurrentPage('reminders')} className="group bg-white rounded-xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105 hover:border-orange-300">
@@ -238,7 +271,7 @@ const Dashboard = () => {
                            <span className="text-white text-3xl">⏰</span>
                        </div>
                        <h3 className="text-xl font-bold text-gray-900 mb-2">Reminders</h3>
-                       <p className="text-gray-600">Never miss a dose</p>
+                       {/* <p className="text-gray-600">Never miss a dose</p> */}
                    </div>
                </div>
                <div onClick={() => setCurrentPage('health-tracking')} className="group bg-white rounded-xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105 hover:border-purple-300">
@@ -247,7 +280,7 @@ const Dashboard = () => {
                            <span className="text-white text-3xl">📊</span>
                        </div>
                        <h3 className="text-xl font-bold text-gray-900 mb-2">Health Tracking</h3>
-                       <p className="text-gray-600">Monitor your progress</p>
+                       {/* <p className="text-gray-600">Monitor your progress</p> */}
                    </div>
                </div>
                <div onClick={() => setCurrentPage('medicines')} className="group bg-white rounded-xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105 hover:border-green-300">
@@ -256,7 +289,7 @@ const Dashboard = () => {
                            <span className="text-white text-3xl">⚕️</span>
                        </div>
                        <h3 className="text-xl font-bold text-gray-900 mb-2">Manage Medicines</h3>
-                       <p className="text-gray-600">Add, edit, and view your medications</p>
+                       {/* <p className="text-gray-600">Add, edit, and view your medications</p> */}
                    </div>
                </div>
             </div>

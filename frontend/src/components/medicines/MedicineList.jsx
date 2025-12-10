@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useMedicines } from '../../hooks/useMedicines';
 import LoadingSpinner from '../LoadingSpinner'; // Ensure you have this or remove imports if not used
-import { scheduleMedicineReminder } from '../../utils/LocalNotificationManager'; // <--- IMPORT THIS
+// import { scheduleMedicineReminder } from '../../utils/LocalNotificationManager'; // <--- IMPORT THIS
+import { scheduleMedicineReminder, cancelAllAlarms } from '../../utils/LocalNotificationManager';
 
 const MedicineList = ({ onEdit }) => {
   const { medicines, loading, error, deleteMedicine, networkStatus } = useMedicines();
@@ -87,7 +88,9 @@ const MedicineList = ({ onEdit }) => {
     <div className="space-y-4 pb-20">
       <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-900">Your Medicines</h2>
-          
+       
+
+
           {/* --- NEW BUTTON HERE --- */}
           <button 
             onClick={handleResyncAlarms}
@@ -96,6 +99,15 @@ const MedicineList = ({ onEdit }) => {
           >
             {isSyncing ? '⏳ Syncing...' : '🔄 Resync Alarms'}
           </button>
+
+          {/* --- temporary button --- */}
+          <button 
+  onClick={cancelAllAlarms}
+  className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-md"
+>
+  ⚠️ Clear All Alarms
+</button>
+{/* --- temporary button --- */}
       </div>
       
       {medicines.map((medicine) => {
