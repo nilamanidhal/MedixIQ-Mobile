@@ -4,63 +4,141 @@ import { useNotifications } from '../hooks/useNotifications';
 import { useMedicines } from '../hooks/useMedicines'; 
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { rescheduleSnooze } from '../utils/LocalNotificationManager'; 
+import { NativeSettings, AndroidSettings, IOSSettings } from 'capacitor-native-settings';
 
-// import { AndroidSettings, IOSSettings, NativeSettings } from 'capacitor-native-settings'; // Optional if you have a settings plugin,
-
-// --- FIXED IMPORTS START HERE ---
-// 1. Medicines are in the sibling 'medicines' folder
+// --- IMPORTS ---
 import MedicineForm from './medicines/MedicineForm';
 import MedicineList from './medicines/MedicineList';
-
-// 2. These pages are inside the 'pages' folder, so we add '/pages/'
 import ActiveMedicines from './pages/ActiveMedicines';
 import Reminders from './pages/Reminders';
-import HealthTracking from './pages/HealthTraking'; // Keeping your file name typo 'Traking'
+import HealthTracking from './pages/HealthTraking';
 import HistorySection from './pages/HistorySection';
 import ContactPage from './pages/ContactPage';
-
-// 3. AiChatbot is in the same folder as Dashboard, so './' is correct
 import AiChatbot from './AiChatbot'; 
-// --- FIXED IMPORTS END HERE ---
+
+
+const openAppDetails = async () => {
+        try {
+            // Attempt 1: The standard "open" method
+            await NativeSettings.open({
+                optionAndroid: AndroidSettings.ApplicationDetails, 
+                optionIOS: IOSSettings.App
+            });
+        } catch (err1) {
+            console.warn("Standard open failed, trying fallback...", err1);
+            try {
+                // Attempt 2: The Android-specific fallback
+                await NativeSettings.openAndroid({
+                    option: AndroidSettings.ApplicationDetails
+                });
+            } catch (err2) {
+                console.error("All attempts failed:", err2);
+                // Final Fallback: Alert the user
+                alert("We couldn't open settings automatically. Please go to Settings > Apps > MedMind > Permissions.");
+            }
+        }
+    };
+
 
 const Dashboard = () => {
     const { user } = useAuth();
-    const { syncOfflineData, lastSyncTime } = useMedicines();
-    // const { syncOfflineData } = useMedicines(); 
+    // Get updateLogStatus to handle notification buttons
+    const { syncOfflineData, lastSyncTime, updateLogStatus } = useMedicines();
 
-    const {
-        permission,
-        requestPermission
-    } = useNotifications();
+    const { permission, requestPermission } = useNotifications();
 
     const [showMedicineForm, setShowMedicineForm] = useState(false);
     const [editingMedicine, setEditingMedicine] = useState(null);
     const [notificationStatus, setNotificationStatus] = useState('');
     const [currentPage, setCurrentPage] = useState('dashboard');
     
+    // 🔥 State to force HistorySection to reload when notification is clicked
+    const [historyUpdateKey, setHistoryUpdateKey] = useState(0); 
+    
     // --- 1. INITIAL SETUP & SYNC ---
     useEffect(() => {
         syncOfflineData();
 
-        const checkPerms = async () => {
+        let actionListenerHandle;
+
+        const initializeApp = async () => {
+            // A. REGISTER BUTTONS (Taken, Missed, Snooze)
+            await LocalNotifications.registerActionTypes({
+                types: [{
+                    id: 'MEDICINE_ACTIONS',
+                    actions: [
+                        { id: 'taken', title: '✅ Taken', foreground: true },
+                        { id: 'missed', title: '❌ Missed', foreground: true, destructive: true },
+                        { id: 'snooze', title: '💤 Snooze 10m', foreground: false }
+                    ]
+                }]
+            });
+
+            // B. CHECK PERMISSIONS
             const perm = await LocalNotifications.checkPermissions();
-            
             if (perm.display === 'granted') {
                 setNotificationStatus("Notifications Active ✅");
             } else {
-                console.log("Notification permission not yet granted. Requesting now...");
-                // Requesting this usually triggers the "Exact Alarm" prompt on Android 12+
-                await LocalNotifications.requestPermissions();
+                const request = await LocalNotifications.requestPermissions();
+                if (request.display === 'granted') {
+                    setNotificationStatus("Notifications Active ✅");
+                }
             }
-        };
-        checkPerms();
-        
-        LocalNotifications.addListener('localNotificationActionPerformed', (payload) => {
-            console.log('Notification Tapped:', payload);
-            setCurrentPage('reminders');
-        });
 
+            // C. REQUEST BATTERY OPTIMIZATION (Prevent OS killing app)
+            if (window.cordova && window.cordova.plugins && window.cordova.plugins.BatteryOptimization) {
+                window.cordova.plugins.BatteryOptimization.isOptimized(function(isOptimized) {
+                    if (isOptimized) {
+                        console.log("⚠️ App is throttled. Requesting unrestricted access...");
+                        window.cordova.plugins.BatteryOptimization.requestOptimization(
+                            function() { console.log("✅ Battery optimization disabled!"); },
+                            function(error) { console.error("❌ Battery permission denied:", error); }
+                        );
+                    }
+                }, function(error) { console.error("Battery check failed:", error); });
+            }
+
+            // D. SETUP LISTENER
+            actionListenerHandle = await LocalNotifications.addListener('localNotificationActionPerformed', async (payload) => {
+                console.log('Action Performed:', payload);
+                
+                const actionId = payload.actionId; 
+                const notificationObject = payload.notification; 
+                const logId = notificationObject.id; 
+                const { medicineName } = notificationObject.extra || {};
+
+                // 1. Handle Buttons (Taken / Missed)
+                if (actionId === 'taken' || actionId === 'missed') {
+                    const result = await updateLogStatus(logId, actionId); 
+                    
+                    if (result.success) {
+                        // 🔥 This triggers the history section to reload
+                        setHistoryUpdateKey(prev => prev + 1); 
+                        setCurrentPage('history-section'); 
+                    } else {
+                        alert(`Error logging status: ${result.message}`);
+                    }
+                } 
+                // 2. Handle Snooze
+                else if (actionId === 'snooze') {
+                     await rescheduleSnooze(notificationObject);
+                     alert(`💤 Snoozed ${medicineName} for 10 minutes`);
+                }
+                // 3. Handle Normal Tap
+                else if (actionId === 'tap') {
+                    setCurrentPage('history-section'); 
+                }
+            });
+        };
+        
+        initializeApp();
+
+        // Cleanup
         return () => {
+            if (actionListenerHandle) {
+                actionListenerHandle.remove();
+            }
             LocalNotifications.removeAllListeners();
         };
     }, []);
@@ -70,17 +148,16 @@ const Dashboard = () => {
         const granted = await requestPermission();
         if (granted) {
             setNotificationStatus('Notifications Active ✅');
-            alert("Permissions Granted! You will hear alarms for your medicines.");
+            alert("Permissions Granted!");
         } else {
             setNotificationStatus('Permission Denied ❌');
-            alert("We need permission to play alarms for your medicine.");
+            alert("We need permission to play alarms.");
         }
     };
 
     const handleTestNotification = async () => {
-       // 1. Create the channel specifically for testing too
         await LocalNotifications.createChannel({
-            id: 'medmind_alarm_v2', // <--- MATCH THE NEW ID
+            id: 'medmind_alarm_v3', 
             name: 'Medicine Alarms',
             importance: 5,
             visibility: 1,
@@ -88,20 +165,21 @@ const Dashboard = () => {
             sound: 'alarm_sound.wav', 
         });
 
-        // 2. Schedule the test
         await LocalNotifications.schedule({
             notifications: [{
                 title: "Test Alarm 🔔",
-                body: "This is how your medicine reminder will sound.",
+                body: "Testing background alarm (v3)",
                 id: 99999,
-                schedule: { at: new Date(Date.now() + 5000) },
-                channelId: 'medmind_alarm_v2', // <--- IMPORTANT: Link to the loud channel
+                schedule: { at: new Date(Date.now() + 5000),
+                    allowWhileIdle: true
+                 },
+                channelId: 'medmind_alarm_v3',
                 sound: 'alarm_sound.wav', 
-                actionTypeId: "",
-                extra: null
+                actionTypeId: "MEDICINE_ACTIONS", // Add buttons to test too
+                extra: { medicineName: "Test Pill" }
             }]
         });
-        alert("Wait 5 seconds... (Exit the app to test background sound)");
+        alert("Wait 5 seconds... (Close app to test background)");
     };
 
     const handleAddMedicine = () => {
@@ -165,6 +243,18 @@ const Dashboard = () => {
             case 'health-tracking': return <HealthTracking />;
             case 'medicines': return renderMedicineManagement();
             case 'contact': return <ContactPage />;
+            
+            // 🔥 ADDED CASE FOR HISTORY REDIRECT
+            case 'history-section': return (
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+                    <div className="mb-4">
+                        <button onClick={() => setCurrentPage('dashboard')} className="text-blue-600 mb-2">← Back to Dashboard</button>
+                    </div>
+                    {/* Pass the key here to force reload */}
+                    <HistorySection forceUpdateKey={historyUpdateKey}/>
+                </div>
+            );
+
             default: return renderDashboardHome();
         }
     };
@@ -193,11 +283,6 @@ const Dashboard = () => {
 
     const renderDashboardHome = () => (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-            {/* <div className="mb-8">
-                <h1 className="text-4xl font-bold text-gray-900 mb-3">Welcome, {user?.name}! 👋</h1>
-                <p className="text-xl text-gray-600">Manage your health and medications effectively with MediMind (Mobile)</p>
-            </div> */}
-
             {/* STATUS CARD */}
             <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-8">
                 <div className="flex justify-between items-center mb-2">
@@ -215,7 +300,7 @@ const Dashboard = () => {
                     </div>
                 </div>
                 
-                {/* NEW: Last Sync Indicator */}
+                {/* Last Sync Indicator */}
                 <div className="flex justify-between items-center pt-2 border-t border-green-200 text-xs text-green-700 font-medium">
                     <span>☁️ Cloud Sync: {lastSyncTime ? new Date(lastSyncTime).toLocaleString() : 'Waiting...'}</span>
                     <button onClick={() => syncOfflineData()} className="underline hover:text-green-900">
@@ -230,7 +315,6 @@ const Dashboard = () => {
                         <div className="text-4xl mr-4">🔔</div>
                         <div className="flex-1">
                             <h3 className="text-xl font-semibold text-blue-900 mb-2">Enable Mobile Alarms</h3>
-                            <p className="text-blue-700 mb-4">Allow MediMind to play sounds when it's time for your medicine.</p>
                             <button
                                 onClick={handleEnableNotifications}
                                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-md"
@@ -262,7 +346,6 @@ const Dashboard = () => {
                            <span className="text-white text-3xl">💊</span>
                        </div>
                        <h3 className="text-xl font-bold text-gray-900 mb-2">Active Medicines</h3>
-                       {/* <p className="text-gray-600">Track your current medications</p> */}
                    </div>
                </div>
                <div onClick={() => setCurrentPage('reminders')} className="group bg-white rounded-xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105 hover:border-orange-300">
@@ -271,7 +354,6 @@ const Dashboard = () => {
                            <span className="text-white text-3xl">⏰</span>
                        </div>
                        <h3 className="text-xl font-bold text-gray-900 mb-2">Reminders</h3>
-                       {/* <p className="text-gray-600">Never miss a dose</p> */}
                    </div>
                </div>
                <div onClick={() => setCurrentPage('health-tracking')} className="group bg-white rounded-xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105 hover:border-purple-300">
@@ -280,7 +362,6 @@ const Dashboard = () => {
                            <span className="text-white text-3xl">📊</span>
                        </div>
                        <h3 className="text-xl font-bold text-gray-900 mb-2">Health Tracking</h3>
-                       {/* <p className="text-gray-600">Monitor your progress</p> */}
                    </div>
                </div>
                <div onClick={() => setCurrentPage('medicines')} className="group bg-white rounded-xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105 hover:border-green-300">
@@ -289,12 +370,12 @@ const Dashboard = () => {
                            <span className="text-white text-3xl">⚕️</span>
                        </div>
                        <h3 className="text-xl font-bold text-gray-900 mb-2">Manage Medicines</h3>
-                       {/* <p className="text-gray-600">Add, edit, and view your medications</p> */}
                    </div>
                </div>
             </div>
 
-            <HistorySection />
+            {/* 🔥 FIXED: Pass the key so history reloads when notification is clicked */}
+            <HistorySection forceUpdateKey={historyUpdateKey}/>
 
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 mt-8">
                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Health Overview</h2>
@@ -303,21 +384,21 @@ const Dashboard = () => {
                         <div className="text-4xl text-blue-600 mr-4">🎯</div>
                         <div>
                             <h3 className="text-lg font-semibold text-gray-900">Today's Goals</h3>
-                            <p className="text-gray-600">Stay consistent with your medication schedule</p>
+                            <p className="text-gray-600">Stay consistent</p>
                         </div>
                     </div>
                     <div className="flex items-center p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100">
                         <div className="text-4xl text-green-600 mr-4">✅</div>
                         <div>
                             <h3 className="text-lg font-semibold text-gray-900">Health Progress</h3>
-                            <p className="text-gray-600">Track your adherence and improvements</p>
+                            <p className="text-gray-600">Track your adherence</p>
                         </div>
                     </div>
                     <div className="flex items-center p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100">
                         <div className="text-4xl text-purple-600 mr-4">🏆</div>
                         <div>
                             <h3 className="text-lg font-semibold text-gray-900">Achievements</h3>
-                            <p className="text-gray-600">Celebrate your health milestones</p>
+                            <p className="text-gray-600">Celebrate milestones</p>
                         </div>
                     </div>
                  </div>
@@ -328,6 +409,20 @@ const Dashboard = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
             {renderNavigation()}
+            
+      {/* ------------------- START PERMISSION ALERT ------------------- */}
+ <div className="flex justify-between items-center pt-2 border-t border-yellow-200 text-xs text-yellow-700 font-medium mt-2">
+    <span className="flex items-center">
+        <span className="mr-1">⚠️</span> 
+        <span>Reliability: Check Autostart</span>
+    </span>
+    <button onClick={openAppDetails} className="underline hover:text-yellow-900">
+        Fix Settings
+    </button>
+</div>
+    {/* ------------------- END PERMISSION ALERT ------------------- */}
+
+    
             {renderCurrentPage()}
             <AiChatbot />
         </div>

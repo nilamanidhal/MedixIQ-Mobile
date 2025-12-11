@@ -36,17 +36,17 @@ const MedicineList = ({ onEdit }) => {
   };
   // -----------------------------
 
-  const handleDelete = async (id, name, isOffline) => {
-    if (isOffline) {
-        alert("This item is not synced to the server yet. You cannot delete it until it syncs.");
-        return;
-    }
-    if (!networkStatus?.connected) {
-        alert("You must be online to delete synced medicines.");
-        return;
-    }
+ const handleDelete = async (id, name, isOffline) => {
+    // 1. REMOVE THE BLOCKING CHECKS
+    // We allow deletion even if it's pending sync or offline.
+    // The hook will handle the queueing logic.
+    
     if (window.confirm(`Are you sure you want to delete ${name}?`)) {
-      await deleteMedicine(id);
+      const result = await deleteMedicine(id);
+      if (!result.success) {
+          // Only alert if the HOOK returns a failure (e.g. valid server error)
+          alert(result.message); 
+      }
     }
   };
 

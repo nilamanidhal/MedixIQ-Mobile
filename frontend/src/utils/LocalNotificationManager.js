@@ -1,21 +1,15 @@
 import { LocalNotifications } from '@capacitor/local-notifications';
 
-// --- 1. Cancel Function ---
 export const cancelMedicineReminders = async (medicineId) => {
   try {
     const pending = await LocalNotifications.getPending();
     const matching = pending.notifications.filter(n => n.extra && n.extra.medicineId === medicineId);
-    
     if (matching.length > 0) {
         await LocalNotifications.cancel({ notifications: matching });
-        console.log(`🗑️ Cleaned up ${matching.length} old alarms for ID: ${medicineId}`);
     }
-  } catch (err) {
-    console.error("❌ Error cancelling alarms:", err);
-  }
+  } catch (err) { console.error("Error cancelling:", err); }
 };
 
-// --- 2. Clear All Function ---
 export const cancelAllAlarms = async () => {
     try {
         const pending = await LocalNotifications.getPending();
@@ -23,35 +17,55 @@ export const cancelAllAlarms = async () => {
             await LocalNotifications.cancel(pending);
             alert("All alarms cleared.");
         }
-    } catch (err) {
-        console.error(err);
-    }
+    } catch (err) { console.error(err); }
 };
 
-// --- 3. Optimized Schedule Function ---
+export const rescheduleSnooze = async (originalNotification) => {
+    const TEN_MINUTES_MS = 10 * 60 * 1000;
+    const snoozeTime = new Date(Date.now() + TEN_MINUTES_MS);
+    const { id, title, body, extra, channelId, sound, actionTypeId } = originalNotification;
+    const snoozeId = parseInt(id) + 500000; 
+
+    try {
+        await LocalNotifications.schedule({
+            notifications: [{
+                title: `${title} (Snoozed)`,
+                body: body,
+                id: snoozeId, 
+                schedule: { at: snoozeTime, allowWhileIdle: true }, 
+                channelId, sound, actionTypeId, extra
+            }]
+        });
+        console.log(`✅ Snoozed until ${snoozeTime.toLocaleTimeString()}`);
+    } catch (error) { console.error("Snooze Error:", error); }
+};
+
 export const scheduleMedicineReminder = async (medicine) => {
   try {
-    if (!medicine || !medicine.duration || !medicine.duration.endDate) {
-        console.error("⚠️ Cannot schedule: Missing data", medicine);
-        return;
-    }
+    if (!medicine || !medicine.duration || !medicine.duration.endDate) return;
 
-    // 1. Cancel OLD/EXISTING alarms first (This keeps the list clean!)
-    if (medicine._id) {
-        await cancelMedicineReminders(medicine._id);
-    }
+    // 1. Register Actions (Ensure they exist)
+    await LocalNotifications.registerActionTypes({
+      types: [{
+          id: 'MEDICINE_ACTIONS', 
+          actions: [
+            { id: 'taken', title: '✅ Taken', foreground: true },
+            { id: 'missed', title: '❌ Missed', foreground: true, destructive: true },
+            { id: 'snooze', title: '💤 Snooze 10m', foreground: false }
+          ]
+      }]
+    });
 
-    // 2. Permission Check
-    const permission = await LocalNotifications.checkPermissions();
-    if (permission.display !== 'granted') {
-        const request = await LocalNotifications.requestPermissions();
-        if (request.display !== 'granted') return;
-    }
+    // 2. Cancel old alarms
+    if (medicine._id) await cancelMedicineReminders(medicine._id);
 
-    // 3. Create Channel
+    // 3. Permission & Channel
+    const perm = await LocalNotifications.checkPermissions();
+    if (perm.display !== 'granted') await LocalNotifications.requestPermissions();
+
     await LocalNotifications.createChannel({
-        id: 'medmind_alarm_v2', 
-        name: 'Medicine Alarms',
+        id: 'medmind_alarm_v3', 
+        name: 'Medicine Alarms High Priority',
         importance: 5,
         visibility: 1,
         vibration: true,
@@ -60,7 +74,7 @@ export const scheduleMedicineReminder = async (medicine) => {
 
     const notificationsToSchedule = [];
     
-    // --- OPTIMIZED DATE LOGIC ---
+    // 4. Date Logic
     const today = new Date();
     today.setHours(0,0,0,0);
 
@@ -68,65 +82,191 @@ export const scheduleMedicineReminder = async (medicine) => {
     startDate.setHours(0,0,0,0);
 
     const endDate = new Date(medicine.duration.endDate);
-    endDate.setHours(0,0,0,0);
+    endDate.setHours(0,0,0,0); // IMPORTANT: Ensure time is 00:00:00
 
     if (today > endDate) {
-        console.log("Skipping: Course ended.");
+        console.log(`Skipping expired medicine: ${medicine.name}`);
         return;
     }
 
-    // Start from Today or StartDate (whichever is later)
     let currentDate = startDate > today ? startDate : today;
-
-    // 🔥 MEMORY PROTECTION: Only schedule the next 45 days
-    // Even if the course is 1 year long, we only put 45 days into the phone.
-    // The user will likely open the app within 45 days, which triggers a refill.
     const MAX_DAYS_AHEAD = 45; 
     let daysScheduled = 0;
 
     while (currentDate <= endDate && daysScheduled < MAX_DAYS_AHEAD) {
-        
         medicine.times.forEach((timeString, index) => {
             const [hours, minutes] = timeString.split(':').map(Number);
-            
             const triggerTime = new Date(currentDate);
             triggerTime.setHours(hours, minutes, 0, 0);
 
-            // Skip times that have already passed TODAY
-            if (triggerTime < new Date()) return;
-
-            // Generate Unique ID
-            const uniqueId = (new Date().getTime() % 10000000) + (daysScheduled * 100) + index;
-
-            notificationsToSchedule.push({
-                title: `Time to take ${medicine.name}`,
-                body: `Dosage: ${medicine.dose}`,
-                id: uniqueId,
-                schedule: { 
-                    at: triggerTime,
-                    allowWhileIdle: true 
-                },
-                channelId: 'medmind_alarm_v2',
-                sound: 'alarm_sound.wav',
-                actionTypeId: 'TAKE_MEDICINE',
-                extra: { medicineId: medicine._id }
-            });
+            // Only schedule if time is in future
+            if (triggerTime > new Date()) {
+                const uniqueId = (new Date().getTime() % 10000000) + (daysScheduled * 100) + index;
+                
+                notificationsToSchedule.push({
+                    title: `Time to take ${medicine.name}`,
+                    body: `Dosage: ${medicine.dose}`,
+                    id: uniqueId,
+                    schedule: { at: triggerTime,
+                                allowWhileIdle: true },
+                    channelId: 'medmind_alarm_v3',
+                    sound: 'alarm_sound.wav',
+                    actionTypeId: 'MEDICINE_ACTIONS',
+                    extra: { 
+                        medicineId: medicine._id,
+                        medicineName: medicine.name,
+                        scheduledTime: triggerTime.toISOString()
+                    }
+                });
+            }
         });
-
-        // Next Day
         currentDate.setDate(currentDate.getDate() + 1);
         daysScheduled++;
     }
 
     if (notificationsToSchedule.length > 0) {
         await LocalNotifications.schedule({ notifications: notificationsToSchedule });
-        console.log(`✅ Refilled schedule: ${notificationsToSchedule.length} alarms set for next ${daysScheduled} days.`);
+        console.log(`✅ Scheduled ${notificationsToSchedule.length} alarms for ${medicine.name}`);
     }
 
-  } catch (error) {
-    console.error("❌ Schedule Error:", error);
-  }
+  } catch (error) { console.error("Schedule Error:", error); }
 };
+
+
+
+
+
+
+
+// import { LocalNotifications } from '@capacitor/local-notifications';
+
+// // --- 1. Cancel Function ---
+// export const cancelMedicineReminders = async (medicineId) => {
+//   try {
+//     const pending = await LocalNotifications.getPending();
+//     const matching = pending.notifications.filter(n => n.extra && n.extra.medicineId === medicineId);
+    
+//     if (matching.length > 0) {
+//         await LocalNotifications.cancel({ notifications: matching });
+//         console.log(`🗑️ Cleaned up ${matching.length} old alarms for ID: ${medicineId}`);
+//     }
+//   } catch (err) {
+//     console.error("❌ Error cancelling alarms:", err);
+//   }
+// };
+
+// // --- 2. Clear All Function ---
+// export const cancelAllAlarms = async () => {
+//     try {
+//         const pending = await LocalNotifications.getPending();
+//         if (pending.notifications.length > 0) {
+//             await LocalNotifications.cancel(pending);
+//             alert("All alarms cleared.");
+//         }
+//     } catch (err) {
+//         console.error(err);
+//     }
+// };
+
+// // --- 3. Optimized Schedule Function ---
+// export const scheduleMedicineReminder = async (medicine) => {
+//   try {
+//     if (!medicine || !medicine.duration || !medicine.duration.endDate) {
+//         console.error("⚠️ Cannot schedule: Missing data", medicine);
+//         return;
+//     }
+
+//     // 1. Cancel OLD/EXISTING alarms first (This keeps the list clean!)
+//     if (medicine._id) {
+//         await cancelMedicineReminders(medicine._id);
+//     }
+
+//     // 2. Permission Check
+//     const permission = await LocalNotifications.checkPermissions();
+//     if (permission.display !== 'granted') {
+//         const request = await LocalNotifications.requestPermissions();
+//         if (request.display !== 'granted') return;
+//     }
+
+//     // 3. Create Channel
+//     await LocalNotifications.createChannel({
+//         id: 'medmind_alarm_v2', 
+//         name: 'Medicine Alarms',
+//         importance: 5,
+//         visibility: 1,
+//         vibration: true,
+//         sound: 'alarm_sound.wav', 
+//     });
+
+//     const notificationsToSchedule = [];
+    
+//     // --- OPTIMIZED DATE LOGIC ---
+//     const today = new Date();
+//     today.setHours(0,0,0,0);
+
+//     const startDate = new Date(medicine.duration.startDate);
+//     startDate.setHours(0,0,0,0);
+
+//     const endDate = new Date(medicine.duration.endDate);
+//     endDate.setHours(0,0,0,0);
+
+//     if (today > endDate) {
+//         console.log("Skipping: Course ended.");
+//         return;
+//     }
+
+//     // Start from Today or StartDate (whichever is later)
+//     let currentDate = startDate > today ? startDate : today;
+
+//     // 🔥 MEMORY PROTECTION: Only schedule the next 45 days
+//     // Even if the course is 1 year long, we only put 45 days into the phone.
+//     // The user will likely open the app within 45 days, which triggers a refill.
+//     const MAX_DAYS_AHEAD = 45; 
+//     let daysScheduled = 0;
+
+//     while (currentDate <= endDate && daysScheduled < MAX_DAYS_AHEAD) {
+        
+//         medicine.times.forEach((timeString, index) => {
+//             const [hours, minutes] = timeString.split(':').map(Number);
+            
+//             const triggerTime = new Date(currentDate);
+//             triggerTime.setHours(hours, minutes, 0, 0);
+
+//             // Skip times that have already passed TODAY
+//             if (triggerTime < new Date()) return;
+
+//             // Generate Unique ID
+//             const uniqueId = (new Date().getTime() % 10000000) + (daysScheduled * 100) + index;
+
+//             notificationsToSchedule.push({
+//                 title: `Time to take ${medicine.name}`,
+//                 body: `Dosage: ${medicine.dose}`,
+//                 id: uniqueId,
+//                 schedule: { 
+//                     at: triggerTime,
+//                     allowWhileIdle: true 
+//                 },
+//                 channelId: 'medmind_alarm_v2',
+//                 sound: 'alarm_sound.wav',
+//                 actionTypeId: 'TAKE_MEDICINE',
+//                 extra: { medicineId: medicine._id }
+//             });
+//         });
+
+//         // Next Day
+//         currentDate.setDate(currentDate.getDate() + 1);
+//         daysScheduled++;
+//     }
+
+//     if (notificationsToSchedule.length > 0) {
+//         await LocalNotifications.schedule({ notifications: notificationsToSchedule });
+//         console.log(`✅ Refilled schedule: ${notificationsToSchedule.length} alarms set for next ${daysScheduled} days.`);
+//     }
+
+//   } catch (error) {
+//     console.error("❌ Schedule Error:", error);
+//   }
+// };
 
 
 

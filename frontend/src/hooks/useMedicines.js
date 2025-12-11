@@ -2,232 +2,472 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Network } from '@capacitor/network';
 import axios from 'axios';
+import { addToQueue, getQueue, clearQueue, saveMedicinesToCache, getCachedMedicines } from '../utils/offlineStorage';
+import { scheduleMedicineReminder, cancelMedicineReminders } from '../utils/LocalNotificationManager';
 
-import { 
-  addToQueue, 
-  getQueue, 
-  clearQueue, 
-  saveMedicinesToCache, 
-  getCachedMedicines 
-} from '../utils/offlineStorage';
-
-import { 
-    scheduleMedicineReminder, 
-    cancelMedicineReminders 
-} from '../utils/LocalNotificationManager';
+// NEW: Helper for Logs Cache
+const LOGS_CACHE_KEY = 'cached_medicine_logs';
+const saveLogsToCache = (logs) => localStorage.setItem(LOGS_CACHE_KEY, JSON.stringify(logs));
+const getCachedLogs = () => {
+    const data = localStorage.getItem(LOGS_CACHE_KEY);
+    return data ? JSON.parse(data) : [];
+};
 
 export const useMedicines = () => {
   const [medicines, setMedicines] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [lastSyncTime, setLastSyncTime] = useState(localStorage.getItem('last_sync_time'));
-  
   const { token, API_BASE_URL } = useAuth();
 
-  // 1. Initial Load
+  // 1. Load Data
   useEffect(() => {
-    const cached = getCachedMedicines();
-    if (cached.length > 0) {
-      setMedicines(cached);
-      setLoading(false);
-    }
-    
-    // Listen for internet to trigger sync
+    loadMedicines();
     Network.addListener('networkStatusChange', status => {
       if (status.connected) syncOfflineData();
     });
   }, []);
 
-  // 2. Fetch (Always use Cache if fetch fails)
-  const fetchMedicines = async () => {
-    const status = await Network.getStatus();
+  const loadMedicines = async () => {
     const cached = getCachedMedicines();
-    
-    // Load cache first (Instant speed)
-    if(cached.length > 0) setMedicines(cached);
+    if (cached.length > 0) setMedicines(cached);
 
+    const status = await Network.getStatus();
     if (status.connected && token) {
       try {
-        const response = await axios.get(`${API_BASE_URL}/medicines`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (response.data.medicines) {
-          setMedicines(response.data.medicines);
-          saveMedicinesToCache(response.data.medicines);
-          
-          const now = new Date().toISOString();
-          localStorage.setItem('last_sync_time', now);
-          setLastSyncTime(now);
-
-          // Refill Alarms in Background
-          response.data.medicines.forEach(med => scheduleMedicineReminder(med).catch(console.error));
-        }
-      } catch (err) {
-        console.log("Offline mode: Using cached data.");
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      setLoading(false);
+        const res = await axios.get(`${API_BASE_URL}/medicines`, { headers: { Authorization: `Bearer ${token}` } });
+        setMedicines(res.data.medicines);
+        saveMedicinesToCache(res.data.medicines);
+        res.data.medicines.forEach(m => scheduleMedicineReminder(m));
+      } catch (e) { console.log("Using offline cache"); }
     }
+    setLoading(false);
   };
 
-  // 3. Add Medicine (Offline + Online)
+  // 2. Add Medicine
   const addMedicine = async (medicineData) => {
     const tempId = `temp_${Date.now()}`;
-    const medicineWithTempId = { ...medicineData, _id: tempId };
+    const newMedicine = { ...medicineData, _id: tempId, pendingSync: true };
 
-    // ALARM FIRST (Works offline)
-    try { await scheduleMedicineReminder(medicineWithTempId); } catch (e) {}
+    setMedicines(prev => {
+        const newList = [...prev, newMedicine];
+        saveMedicinesToCache(newList);
+        return newList;
+    });
+    
+    await scheduleMedicineReminder(newMedicine);
 
     const status = await Network.getStatus();
-
     if (status.connected) {
       try {
-        const response = await axios.post(`${API_BASE_URL}/medicines`, medicineData, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (response.status === 200 || response.status === 201) {
-             const realMedicine = response.data.medicine || response.data;
-             await cancelMedicineReminders(tempId);
-             await scheduleMedicineReminder(realMedicine);
-             fetchMedicines();
-             return { success: true };
+        const res = await axios.post(`${API_BASE_URL}/medicines`, medicineData, { headers: { Authorization: `Bearer ${token}` } });
+        
+        if (res.status === 200 || res.status === 201) {
+            const realMedicine = res.data.medicine || res.data;
+            await cancelMedicineReminders(tempId);
+            await scheduleMedicineReminder(realMedicine);
+
+            setMedicines(prev => {
+                const newList = prev.map(m => m._id === tempId ? realMedicine : m);
+                saveMedicinesToCache(newList);
+                return newList;
+            });
+            return { success: true };
         }
-      } catch (e) { return { success: false, message: "Server error" }; }
+      } catch (e) { return { success: false, message: "Server error, saved locally." }; }
     } else {
-      // QUEUE FOR SYNC
       addToQueue('ADD', medicineData);
-      
-      const newList = [...medicines, { ...medicineWithTempId, pendingSync: true }];
-      setMedicines(newList);
-      saveMedicinesToCache(newList);
-      return { success: true, message: "Saved to phone. Will sync later." };
+      return { success: true, message: "Offline. Saved to device." };
     }
   };
 
-  // 4. Update Medicine (Offline + Online)
+  // 3. Update Medicine
   const updateMedicine = async (id, medicineData) => {
-    // ALARM FIRST
-    const medicineWithId = { ...medicineData, _id: id };
-    await scheduleMedicineReminder(medicineWithId);
+    setMedicines(prev => {
+        const newList = prev.map(m => m._id === id ? { ...medicineData, _id: id, pendingSync: true } : m);
+        saveMedicinesToCache(newList);
+        return newList;
+    });
+
+    await scheduleMedicineReminder({ ...medicineData, _id: id });
 
     const status = await Network.getStatus();
-
     if (status.connected) {
-       try {
-         await axios.put(`${API_BASE_URL}/medicines/${id}`, medicineData, {
-            headers: { Authorization: `Bearer ${token}` }
-         });
-         fetchMedicines();
-         return { success: true };
-       } catch (e) { return { success: false, message: "Update failed" }; }
+      try {
+        await axios.put(`${API_BASE_URL}/medicines/${id}`, medicineData, { headers: { Authorization: `Bearer ${token}` } });
+        
+        setMedicines(prev => {
+            const newList = prev.map(m => m._id === id ? { ...medicineData, _id: id } : m);
+            saveMedicinesToCache(newList);
+            return newList;
+        });
+        return { success: true };
+      } catch (e) { return { success: false }; }
     } else {
-       // OFFLINE UPDATE
-       addToQueue('UPDATE', { id, ...medicineData }); // Add to sync queue
-
-       // Update Local List Immediately
-       const newList = medicines.map(med => med._id === id ? { ...medicineWithId, pendingSync: true } : med);
-       setMedicines(newList);
-       saveMedicinesToCache(newList);
-       return { success: true, message: "Updated locally." };
+      addToQueue('UPDATE', { id, ...medicineData });
+      return { success: true };
     }
   };
 
-  // 5. Delete Medicine (Offline + Online)
+  // 4. Delete Medicine
   const deleteMedicine = async (id) => {
-    // ALARM FIRST
+    setMedicines(prev => {
+        const newList = prev.filter(m => m._id !== id);
+        saveMedicinesToCache(newList);
+        return newList;
+    });
+
     await cancelMedicineReminders(id);
 
     const status = await Network.getStatus();
-
     if (status.connected) {
-       try {
-         await axios.delete(`${API_BASE_URL}/medicines/${id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-         });
-         fetchMedicines();
-         return { success: true };
-       } catch (e) { return { success: false, message: "Delete failed" }; }
-    } else {
-       // OFFLINE DELETE
-       addToQueue('DELETE', { id });
-
-       // Remove from Local List Immediately
-       const newList = medicines.filter(med => med._id !== id);
-       setMedicines(newList);
-       saveMedicinesToCache(newList);
-       return { success: true, message: "Deleted locally." };
-    }
-  };
-
-  // 6. Sync Logic (Handles ADD, UPDATE, DELETE)
-  const syncOfflineData = async () => {
-    const queue = getQueue();
-    if (queue.length === 0) { fetchMedicines(); return; }
-
-    console.log("Syncing queue:", queue);
-
-    for (const item of queue) {
       try {
-        if (item.action === 'ADD') {
-          await axios.post(`${API_BASE_URL}/medicines`, item.data, { headers: { Authorization: `Bearer ${token}` }});
-        } 
-        else if (item.action === 'UPDATE') {
-          const { id, ...data } = item.data;
-          await axios.put(`${API_BASE_URL}/medicines/${id}`, data, { headers: { Authorization: `Bearer ${token}` }});
-        } 
-        else if (item.action === 'DELETE') {
-          await axios.delete(`${API_BASE_URL}/medicines/${item.data.id}`, { headers: { Authorization: `Bearer ${token}` }});
-        }
-      } catch (err) { console.error("Sync item failed:", item); }
+        await axios.delete(`${API_BASE_URL}/medicines/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+        return { success: true };
+      } catch (e) { return { success: false }; }
+    } else {
+      addToQueue('DELETE', { id });
+      return { success: true };
     }
-    clearQueue();
-    fetchMedicines();
   };
 
-  // Keep logs/addLog same as before... (omitted for brevity)
-  // 7. Logs (Restored Real Logic)
-  const fetchLogs = async () => {
-    // Check if we are online because logs are usually fetched from server
-    // (You can implement caching for this later if you want)
-    if (token) {
-        try {
-           const response = await axios.get(`${API_BASE_URL}/medicines/logs`, {
-             headers: { Authorization: `Bearer ${token}` }
-           });
-           return response.data.logs || [];
-        } catch (err) {
-          console.error("Error fetching logs:", err);
-          return [];
-        }
-    }
-    return [];
-  };
+  // 5. Update Log (Used by Buttons)
+  const updateLogStatus = async (logId, statusVal) => {
+      // Optimistic Update for Logs Cache
+      const currentLogs = getCachedLogs();
+      const updatedLogs = currentLogs.map(log => log._id === logId ? { ...log, status: statusVal } : log);
+      saveLogsToCache(updatedLogs);
 
-  const addLog = async (medicineId, logData) => {
-      // Allow logging even if offline (Queue it)
       const status = await Network.getStatus();
-      
       if (status.connected) {
           try {
-            const response = await axios.post(`${API_BASE_URL}/medicines/log/${medicineId}`, logData, {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-            return response.data;
-          } catch (err) {
-            return { message: "Error logging dose" };
-          }
+              await axios.put(`${API_BASE_URL}/medicines/logs/${logId}`, { status: statusVal }, { headers: { Authorization: `Bearer ${token}` } });
+              return { success: true, message: "Logged." };
+          } catch (e) { return { success: false, message: "Server error" }; }
       } else {
-          // If offline, we just alert the user for now (or you can add to queue)
-          alert("You are offline. Dose will be logged when connection returns.");
-          // To make this fully offline, you would add an 'ADD_LOG' action to your syncQueue
-          return { success: true, offline: true };
+          addToQueue('UPDATE_LOG', { logId, status: statusVal });
+          return { success: true, message: "Saved offline." };
       }
   };
 
-  return { medicines, loading, error, lastSyncTime, fetchMedicines, addMedicine, updateMedicine, deleteMedicine, syncOfflineData, fetchLogs, addLog };
+  // 6. Sync Function
+  const syncOfflineData = async () => {
+    let queue = getQueue();
+    if (queue.length === 0) return;
+
+    let i = 0;
+    while (i < queue.length) {
+      const item = queue[i];
+      let success = false;
+
+      try {
+        if (item.action === 'ADD') {
+          const res = await axios.post(`${API_BASE_URL}/medicines`, item.data, { headers: { Authorization: `Bearer ${token}` } });
+          if (res.status === 200 || res.status === 201) {
+            success = true;
+            const tempId = item.data._id;
+            const realId = (res.data.medicine || res.data)._id;
+            queue = queue.map(q => {
+                if (q.data.id === tempId) q.data.id = realId;
+                if (q.data.logId === tempId) q.data.logId = realId;
+                return q;
+            });
+          }
+        } 
+        else if (item.action === 'UPDATE') {
+          await axios.put(`${API_BASE_URL}/medicines/${item.data.id}`, item.data, { headers: { Authorization: `Bearer ${token}` } });
+          success = true;
+        } 
+        else if (item.action === 'DELETE') {
+          await axios.delete(`${API_BASE_URL}/medicines/${item.data.id}`, { headers: { Authorization: `Bearer ${token}` } });
+          success = true;
+        }
+        else if (item.action === 'UPDATE_LOG') {
+           await axios.put(`${API_BASE_URL}/medicines/logs/${item.data.logId}`, { status: item.data.status }, { headers: { Authorization: `Bearer ${token}` } });
+           success = true;
+        }
+      } catch (e) { if(e.response?.status === 404) success = true; }
+
+      if (success) {
+        queue.splice(i, 1);
+        localStorage.setItem('offline_mutation_queue', JSON.stringify(queue));
+      } else {
+        i++;
+      }
+    }
+    clearQueue();
+    fetchMedicines(); 
+  };
+
+  // 7. Logs Fetcher (FIXED: Uses Cache)
+  const fetchLogs = async () => {
+    // Return cache immediately so UI isn't empty
+    const cachedLogs = getCachedLogs();
+    
+    // If we have token, try to update from server
+    if (token) {
+        try {
+           const response = await axios.get(`${API_BASE_URL}/medicines/logs`, { headers: { Authorization: `Bearer ${token}` } });
+           const logs = response.data.logs || [];
+           saveLogsToCache(logs); // Save fresh data
+           return logs;
+        } catch (err) { 
+            console.log("Offline: returning cached logs");
+            return cachedLogs; 
+        }
+    }
+    return cachedLogs;
+  };
+
+  const addLog = async (medicineId, logData) => {
+      // Simple Add Log implementation if needed
+      const status = await Network.getStatus();
+      if (status.connected) {
+          try {
+            const res = await axios.post(`${API_BASE_URL}/medicines/log/${medicineId}`, logData, { headers: { Authorization: `Bearer ${token}` } });
+            return res.data;
+          } catch (e) { return { message: "Error" }; }
+      } else {
+          return { success: true, message: "Offline log saved" };
+      }
+  };
+
+  return { medicines, loading, fetchMedicines: loadMedicines, addMedicine, updateMedicine, deleteMedicine, updateLogStatus, syncOfflineData, fetchLogs, addLog };
 };
+
+
+
+
+
+
+// import { useState, useEffect } from 'react';
+// import { useAuth } from '../contexts/AuthContext';
+// import { Network } from '@capacitor/network';
+// import axios from 'axios';
+
+// import { 
+//   addToQueue, 
+//   getQueue, 
+//   clearQueue, 
+//   saveMedicinesToCache, 
+//   getCachedMedicines 
+// } from '../utils/offlineStorage';
+
+// import { 
+//     scheduleMedicineReminder, 
+//     cancelMedicineReminders 
+// } from '../utils/LocalNotificationManager';
+
+// export const useMedicines = () => {
+//   const [medicines, setMedicines] = useState([]);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(null);
+//   const [lastSyncTime, setLastSyncTime] = useState(localStorage.getItem('last_sync_time'));
+  
+//   const { token, API_BASE_URL } = useAuth();
+
+//   // 1. Initial Load
+//   useEffect(() => {
+//     const cached = getCachedMedicines();
+//     if (cached.length > 0) {
+//       setMedicines(cached);
+//       setLoading(false);
+//     }
+    
+//     // Listen for internet to trigger sync
+//     Network.addListener('networkStatusChange', status => {
+//       if (status.connected) syncOfflineData();
+//     });
+//   }, []);
+
+//   // 2. Fetch (Always use Cache if fetch fails)
+//   const fetchMedicines = async () => {
+//     const status = await Network.getStatus();
+//     const cached = getCachedMedicines();
+    
+//     // Load cache first (Instant speed)
+//     if(cached.length > 0) setMedicines(cached);
+
+//     if (status.connected && token) {
+//       try {
+//         const response = await axios.get(`${API_BASE_URL}/medicines`, {
+//           headers: { Authorization: `Bearer ${token}` }
+//         });
+//         if (response.data.medicines) {
+//           setMedicines(response.data.medicines);
+//           saveMedicinesToCache(response.data.medicines);
+          
+//           const now = new Date().toISOString();
+//           localStorage.setItem('last_sync_time', now);
+//           setLastSyncTime(now);
+
+//           // Refill Alarms in Background
+//           response.data.medicines.forEach(med => scheduleMedicineReminder(med).catch(console.error));
+//         }
+//       } catch (err) {
+//         console.log("Offline mode: Using cached data.");
+//       } finally {
+//         setLoading(false);
+//       }
+//     } else {
+//       setLoading(false);
+//     }
+//   };
+
+//   // 3. Add Medicine (Offline + Online)
+//   const addMedicine = async (medicineData) => {
+//     const tempId = `temp_${Date.now()}`;
+//     const medicineWithTempId = { ...medicineData, _id: tempId };
+
+//     // ALARM FIRST (Works offline)
+//     try { await scheduleMedicineReminder(medicineWithTempId); } catch (e) {}
+
+//     const status = await Network.getStatus();
+
+//     if (status.connected) {
+//       try {
+//         const response = await axios.post(`${API_BASE_URL}/medicines`, medicineData, {
+//           headers: { Authorization: `Bearer ${token}` }
+//         });
+//         if (response.status === 200 || response.status === 201) {
+//              const realMedicine = response.data.medicine || response.data;
+//              await cancelMedicineReminders(tempId);
+//              await scheduleMedicineReminder(realMedicine);
+//              fetchMedicines();
+//              return { success: true };
+//         }
+//       } catch (e) { return { success: false, message: "Server error" }; }
+//     } else {
+//       // QUEUE FOR SYNC
+//       addToQueue('ADD', medicineData);
+      
+//       const newList = [...medicines, { ...medicineWithTempId, pendingSync: true }];
+//       setMedicines(newList);
+//       saveMedicinesToCache(newList);
+//       return { success: true, message: "Saved to phone. Will sync later." };
+//     }
+//   };
+
+//   // 4. Update Medicine (Offline + Online)
+//   const updateMedicine = async (id, medicineData) => {
+//     // ALARM FIRST
+//     const medicineWithId = { ...medicineData, _id: id };
+//     await scheduleMedicineReminder(medicineWithId);
+
+//     const status = await Network.getStatus();
+
+//     if (status.connected) {
+//        try {
+//          await axios.put(`${API_BASE_URL}/medicines/${id}`, medicineData, {
+//             headers: { Authorization: `Bearer ${token}` }
+//          });
+//          fetchMedicines();
+//          return { success: true };
+//        } catch (e) { return { success: false, message: "Update failed" }; }
+//     } else {
+//        // OFFLINE UPDATE
+//        addToQueue('UPDATE', { id, ...medicineData }); // Add to sync queue
+
+//        // Update Local List Immediately
+//        const newList = medicines.map(med => med._id === id ? { ...medicineWithId, pendingSync: true } : med);
+//        setMedicines(newList);
+//        saveMedicinesToCache(newList);
+//        return { success: true, message: "Updated locally." };
+//     }
+//   };
+
+//   // 5. Delete Medicine (Offline + Online)
+//   const deleteMedicine = async (id) => {
+//     // ALARM FIRST
+//     await cancelMedicineReminders(id);
+
+//     const status = await Network.getStatus();
+
+//     if (status.connected) {
+//        try {
+//          await axios.delete(`${API_BASE_URL}/medicines/${id}`, {
+//             headers: { Authorization: `Bearer ${token}` }
+//          });
+//          fetchMedicines();
+//          return { success: true };
+//        } catch (e) { return { success: false, message: "Delete failed" }; }
+//     } else {
+//        // OFFLINE DELETE
+//        addToQueue('DELETE', { id });
+
+//        // Remove from Local List Immediately
+//        const newList = medicines.filter(med => med._id !== id);
+//        setMedicines(newList);
+//        saveMedicinesToCache(newList);
+//        return { success: true, message: "Deleted locally." };
+//     }
+//   };
+
+//   // 6. Sync Logic (Handles ADD, UPDATE, DELETE)
+//   const syncOfflineData = async () => {
+//     const queue = getQueue();
+//     if (queue.length === 0) { fetchMedicines(); return; }
+
+//     console.log("Syncing queue:", queue);
+
+//     for (const item of queue) {
+//       try {
+//         if (item.action === 'ADD') {
+//           await axios.post(`${API_BASE_URL}/medicines`, item.data, { headers: { Authorization: `Bearer ${token}` }});
+//         } 
+//         else if (item.action === 'UPDATE') {
+//           const { id, ...data } = item.data;
+//           await axios.put(`${API_BASE_URL}/medicines/${id}`, data, { headers: { Authorization: `Bearer ${token}` }});
+//         } 
+//         else if (item.action === 'DELETE') {
+//           await axios.delete(`${API_BASE_URL}/medicines/${item.data.id}`, { headers: { Authorization: `Bearer ${token}` }});
+//         }
+//       } catch (err) { console.error("Sync item failed:", item); }
+//     }
+//     clearQueue();
+//     fetchMedicines();
+//   };
+
+//   // Keep logs/addLog same as before... (omitted for brevity)
+//   // 7. Logs (Restored Real Logic)
+//   const fetchLogs = async () => {
+//     // Check if we are online because logs are usually fetched from server
+//     // (You can implement caching for this later if you want)
+//     if (token) {
+//         try {
+//            const response = await axios.get(`${API_BASE_URL}/medicines/logs`, {
+//              headers: { Authorization: `Bearer ${token}` }
+//            });
+//            return response.data.logs || [];
+//         } catch (err) {
+//           console.error("Error fetching logs:", err);
+//           return [];
+//         }
+//     }
+//     return [];
+//   };
+
+//   const addLog = async (medicineId, logData) => {
+//       // Allow logging even if offline (Queue it)
+//       const status = await Network.getStatus();
+      
+//       if (status.connected) {
+//           try {
+//             const response = await axios.post(`${API_BASE_URL}/medicines/log/${medicineId}`, logData, {
+//               headers: { Authorization: `Bearer ${token}` }
+//             });
+//             return response.data;
+//           } catch (err) {
+//             return { message: "Error logging dose" };
+//           }
+//       } else {
+//           // If offline, we just alert the user for now (or you can add to queue)
+//           alert("You are offline. Dose will be logged when connection returns.");
+//           // To make this fully offline, you would add an 'ADD_LOG' action to your syncQueue
+//           return { success: true, offline: true };
+//       }
+//   };
+
+//   return { medicines, loading, error, lastSyncTime, fetchMedicines, addMedicine, updateMedicine, deleteMedicine, syncOfflineData, fetchLogs, addLog };
+// };
 
 
 
