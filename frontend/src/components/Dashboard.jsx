@@ -44,7 +44,15 @@ const openAppDetails = async () => {
 const Dashboard = () => {
     const { user } = useAuth();
     // Get updateLogStatus to handle notification buttons
-    const { syncOfflineData, lastSyncTime, updateLogStatus } = useMedicines();
+    const medicinesHook = useMedicines();
+const {
+  medicines,
+  logs,
+  syncOfflineData,
+  updateLogStatus,
+  handleNotificationAction,
+  lastSyncTime
+} = medicinesHook;
 
     const { permission, requestPermission } = useNotifications();
 
@@ -52,7 +60,7 @@ const Dashboard = () => {
     const [editingMedicine, setEditingMedicine] = useState(null);
     const [notificationStatus, setNotificationStatus] = useState('');
     const [currentPage, setCurrentPage] = useState('dashboard');
-    
+
     // 🔥 State to force HistorySection to reload when notification is clicked
     const [historyUpdateKey, setHistoryUpdateKey] = useState(0); 
     
@@ -130,6 +138,27 @@ const Dashboard = () => {
                     setCurrentPage('history-section'); 
                 }
             });
+
+            actionListenerHandle = await LocalNotifications.addListener('localNotificationActionPerformed', async (payload) => {
+        const actionId = payload.actionId; 
+        const notificationObject = payload.notification; 
+        
+        // Extract Medicine Details from the "extra" data we attached
+        const { medicineId, medicineName } = notificationObject.extra || {};
+
+        if (actionId === 'taken' || actionId === 'missed') {
+            // 🔥 Use the new handler that creates a fresh log entry
+            const result = await handleNotificationAction(medicineId, actionId, medicineName);
+            
+            if (result.success) {
+                setHistoryUpdateKey(prev => prev + 1); 
+                setCurrentPage('history-section'); 
+            }
+        } 
+        else if (actionId === 'snooze') {
+             await rescheduleSnooze(notificationObject);
+        }
+    });
         };
         
         initializeApp();

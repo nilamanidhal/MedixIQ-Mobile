@@ -1,34 +1,93 @@
 // frontend/src/utils/offlineStorage.js
 
 const QUEUE_KEY = 'offline_mutation_queue';
-const CACHE_KEY = 'cached_medicines';
+const MEDICINE_CACHE_KEY = 'cached_medicines';
+const LOGS_CACHE_KEY = 'cached_medicine_logs';
 
-// 1. Get the Queue (List of actions waiting for internet)
+// --- QUEUE ---
 export const getQueue = () => {
-  const queue = localStorage.getItem(QUEUE_KEY);
-  return queue ? JSON.parse(queue) : [];
+  try {
+    const queue = localStorage.getItem(QUEUE_KEY);
+    return queue ? JSON.parse(queue) : [];
+  } catch (e) { return []; }
 };
 
-// 2. Add Item to Queue
 export const addToQueue = (action, data) => {
-  const queue = getQueue();
-  // Action can be 'ADD', 'UPDATE', 'DELETE'
-  // We add a timestamp so we know when it happened
-  queue.push({ action, data, timestamp: Date.now() }); 
-  localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+  try {
+    const queue = getQueue();
+    queue.push({ action, data, timestamp: Date.now() });
+    localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+  } catch (e) { console.error(e); }
 };
 
-// 3. Clear Queue (Run this after we successfully sync with DB)
-export const clearQueue = () => {
-  localStorage.removeItem(QUEUE_KEY);
+export const saveQueue = (updatedQueue) => {
+    localStorage.setItem(QUEUE_KEY, JSON.stringify(updatedQueue));
 };
 
-// 4. Cache Medicines (Save latest list to phone so it loads instantly)
+export const clearQueue = () => localStorage.removeItem(QUEUE_KEY);
+
+// --- MEDICINES ---
 export const saveMedicinesToCache = (medicines) => {
-  localStorage.setItem(CACHE_KEY, JSON.stringify(medicines));
+  localStorage.setItem(MEDICINE_CACHE_KEY, JSON.stringify(medicines));
 };
 
 export const getCachedMedicines = () => {
-  const cached = localStorage.getItem(CACHE_KEY);
-  return cached ? JSON.parse(cached) : [];
+  try {
+    const cached = localStorage.getItem(MEDICINE_CACHE_KEY);
+    return cached ? JSON.parse(cached) : [];
+  } catch (e) { return []; }
 };
+
+// --- LOGS ---
+export const saveLogsToCache = (logs) => {
+  localStorage.setItem(LOGS_CACHE_KEY, JSON.stringify(logs));
+};
+
+export const getCachedLogs = () => {
+  try {
+    const cached = localStorage.getItem(LOGS_CACHE_KEY);
+    return cached ? JSON.parse(cached) : [];
+  } catch (e) { return []; }
+};
+
+
+
+
+
+
+
+
+// // frontend/src/utils/offlineStorage.js
+
+// const QUEUE_KEY = 'offline_mutation_queue';
+// const CACHE_KEY = 'cached_medicines';
+
+// // 1. Get the Queue (List of actions waiting for internet)
+// export const getQueue = () => {
+//   const queue = localStorage.getItem(QUEUE_KEY);
+//   return queue ? JSON.parse(queue) : [];
+// };
+
+// // 2. Add Item to Queue
+// export const addToQueue = (action, data) => {
+//   const queue = getQueue();
+//   // Action can be 'ADD', 'UPDATE', 'DELETE'
+//   // We add a timestamp so we know when it happened
+//   queue.push({ action, data, timestamp: Date.now() }); 
+//   localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+// };
+
+// // 3. Clear Queue (Run this after we successfully sync with DB)
+// export const clearQueue = () => {
+//   localStorage.removeItem(QUEUE_KEY);
+// };
+
+// // 4. Cache Medicines (Save latest list to phone so it loads instantly)
+// export const saveMedicinesToCache = (medicines) => {
+//   localStorage.setItem(CACHE_KEY, JSON.stringify(medicines));
+// };
+
+// export const getCachedMedicines = () => {
+//   const cached = localStorage.getItem(CACHE_KEY);
+//   return cached ? JSON.parse(cached) : [];
+// };
