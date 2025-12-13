@@ -1,43 +1,87 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const Medicine = require('../models/Medicine');
-const authMiddleware = require('../middleware/auth');
 const MedicineLog = require('../models/MedicineLog');
+const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
 
-
-// ✅ Fetch history logs
-router.get('/logs', authMiddleware, async (req, res) => {
-  try {
-    const logs = await MedicineLog.find({ userId: req.user._id })
-      .populate('medicineId', 'name dose')
-      .sort({ createdAt: -1 });
-
-    res.json({ logs });
-  } catch (error) {
-    console.error('Error fetching logs:', error);
-    res.status(500).json({ message: 'Error fetching logs' });
-  }
-});
-
-// Get all medicines for authenticated user
+/* =========================================================
+   GET ALL MEDICINES (ONLINE SYNC)
+   ========================================================= */
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const medicines = await Medicine.find({ 
+    const medicines = await Medicine.find({
       userId: req.user._id,
-      isActive: true 
+      isActive: true
     }).sort({ createdAt: -1 });
-    
+
     res.json({ medicines });
-  } catch (error) {
-    console.error('Fetch medicines error:', error);
-    res.status(500).json({ message: 'Server error fetching medicines' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error fetching medicines' });
   }
 });
 
-// Get single medicine by ID
-router.get('/:id', authMiddleware, async (req, res) => {
+/* =========================================================
+   ADD MEDICINE (OFFLINE SAFE / IDEMPOTENT)
+   ========================================================= */
+router.post(
+  '/',
+  authMiddleware,
+  [
+    body('clientId').notEmpty().withMessage('clientId is required'),
+    body('name').notEmpty(),
+    body('dose').notEmpty(),
+    body('times').isArray({ min: 1 }),
+    body('duration.startDate').isISO8601(),
+    body('duration.endDate').isISO8601()
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const { clientId, name, dose, times, duration, notes } = req.body;
+
+      // 🔁 Prevent duplicate creation (important for sync retry)
+      const existing = await Medicine.findOne({
+        userId: req.user._id,
+        clientId
+      });
+
+      if (existing) {
+        return res.json({ medicine: existing });
+      }
+
+      const medicine = new Medicine({
+        userId: req.user._id,
+        clientId,
+        name,
+        dose,
+        times,
+        duration: {
+          startDate: new Date(duration.startDate),
+          endDate: new Date(duration.endDate)
+        },
+        notes
+      });
+
+      await medicine.save();
+      res.status(201).json({ medicine });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: 'Error adding medicine' });
+    }
+  }
+);
+
+/* =========================================================
+   UPDATE MEDICINE
+   ========================================================= */
+router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const medicine = await Medicine.findOne({
       _id: req.params.id,
@@ -47,129 +91,20 @@ router.get('/:id', authMiddleware, async (req, res) => {
     if (!medicine) {
       return res.status(404).json({ message: 'Medicine not found' });
     }
+
+    Object.assign(medicine, req.body);
+    await medicine.save();
 
     res.json({ medicine });
-  } catch (error) {
-    console.error('Fetch medicine error:', error);
-    res.status(500).json({ message: 'Server error fetching medicine' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error updating medicine' });
   }
 });
 
-// Add new medicine
-router.post('/', authMiddleware, [
-  body('name').trim().notEmpty().withMessage('Medicine name is required'),
-  body('dose').trim().notEmpty().withMessage('Dose is required'),
-  body('times').isArray({ min: 1 }).withMessage('At least one time is required'),
-  body('times.*').matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Time must be in HH:MM format'),
-  body('duration.startDate').isISO8601().withMessage('Valid start date is required'),
-  body('duration.endDate').isISO8601().withMessage('Valid end date is required'),
-  body('notes').optional().isLength({ max: 500 }).withMessage('Notes cannot exceed 500 characters')
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ 
-        message: 'Validation failed', 
-        errors: errors.array() 
-      });
-    }
-
-    const { name, dose, times, duration, notes } = req.body;
-
-    // Validate dates
-    const startDate = new Date(duration.startDate);
-    const endDate = new Date(duration.endDate);
-    
-    if (endDate <= startDate) {
-      return res.status(400).json({ message: 'End date must be after start date' });
-    }
-
-    const medicine = new Medicine({
-      userId: req.user._id,
-      name,
-      dose,
-      times,
-      duration: {
-        startDate,
-        endDate
-      },
-      notes
-    });
-
-    await medicine.save();
-
-    res.status(201).json({
-      message: 'Medicine added successfully',
-      medicine
-    });
-  } catch (error) {
-    console.error('Add medicine error:', error);
-    res.status(500).json({ message: 'Server error adding medicine' });
-  }
-});
-
-// Update medicine
-router.put('/:id', authMiddleware, [
-  body('name').optional().trim().notEmpty().withMessage('Medicine name cannot be empty'),
-  body('dose').optional().trim().notEmpty().withMessage('Dose cannot be empty'),
-  body('times').optional().isArray({ min: 1 }).withMessage('At least one time is required'),
-  body('times.*').optional().matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Time must be in HH:MM format'),
-  body('duration.startDate').optional().isISO8601().withMessage('Valid start date is required'),
-  body('duration.endDate').optional().isISO8601().withMessage('Valid end date is required'),
-  body('notes').optional().isLength({ max: 500 }).withMessage('Notes cannot exceed 500 characters')
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ 
-        message: 'Validation failed', 
-        errors: errors.array() 
-      });
-    }
-
-    const { name, dose, times, duration, notes } = req.body;
-
-    // Find the medicine
-    const medicine = await Medicine.findOne({
-      _id: req.params.id,
-      userId: req.user._id
-    });
-
-    if (!medicine) {
-      return res.status(404).json({ message: 'Medicine not found' });
-    }
-
-    // Update fields
-    if (name) medicine.name = name;
-    if (dose) medicine.dose = dose;
-    if (times) medicine.times = times;
-    if (notes !== undefined) medicine.notes = notes;
-    
-    if (duration) {
-      const startDate = new Date(duration.startDate);
-      const endDate = new Date(duration.endDate);
-      
-      if (endDate <= startDate) {
-        return res.status(400).json({ message: 'End date must be after start date' });
-      }
-      
-      medicine.duration.startDate = startDate;
-      medicine.duration.endDate = endDate;
-    }
-
-    await medicine.save();
-
-    res.json({
-      message: 'Medicine updated successfully',
-      medicine
-    });
-  } catch (error) {
-    console.error('Update medicine error:', error);
-    res.status(500).json({ message: 'Server error updating medicine' });
-  }
-});
-
-// Delete medicine
+/* =========================================================
+   DELETE MEDICINE (SOFT DELETE)
+   ========================================================= */
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const medicine = await Medicine.findOne({
@@ -181,21 +116,86 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       return res.status(404).json({ message: 'Medicine not found' });
     }
 
-    // Soft delete by setting isActive to false
     medicine.isActive = false;
     await medicine.save();
 
-    res.json({ message: 'Medicine deleted successfully' });
-  } catch (error) {
-    console.error('Delete medicine error:', error);
-    res.status(500).json({ message: 'Server error deleting medicine' });
+    res.json({ message: 'Medicine deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error deleting medicine' });
   }
 });
 
+/* =========================================================
+   ADD / SYNC MEDICINE LOG (🔥 MOST IMPORTANT FIX)
+   ========================================================= */
+router.post('/logs', authMiddleware, async (req, res) => {
+  try {
+    const { clientLogId, medicineClientId, status, date, time } = req.body;
 
+    if (!clientLogId || !medicineClientId) {
+      return res.status(400).json({ message: 'Invalid log data' });
+    }
 
+    // 🔁 Prevent duplicate log creation
+    const existingLog = await MedicineLog.findOne({
+      userId: req.user._id,
+      clientLogId
+    });
 
-// ✅ Update log status (taken / missed)
+    if (existingLog) {
+      return res.json({ log: existingLog });
+    }
+
+    // 🔎 Find medicine using clientId (offline-safe)
+    const medicine = await Medicine.findOne({
+      userId: req.user._id,
+      clientId: medicineClientId
+    });
+
+    if (!medicine) {
+      return res.status(404).json({ message: 'Medicine not found for log' });
+    }
+
+    const log = new MedicineLog({
+      userId: req.user._id,
+      clientLogId,
+      medicineClientId,
+      medicineId: medicine._id,
+      status,
+      date: new Date(date),
+      time
+    });
+
+    await log.save();
+    res.status(201).json({ log });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error creating log' });
+  }
+});
+
+/* =========================================================
+   GET FULL HISTORY (ONLINE ONLY)
+   ========================================================= */
+router.get('/logs', authMiddleware, async (req, res) => {
+  try {
+    const logs = await MedicineLog.find({
+      userId: req.user._id
+    })
+      .populate('medicineId', 'name dose')
+      .sort({ createdAt: -1 });
+
+    res.json({ logs });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error fetching logs' });
+  }
+});
+
+/* =========================================================
+   UPDATE LOG STATUS (TAKEN / MISSED)
+   ========================================================= */
 router.put('/logs/:logId', authMiddleware, async (req, res) => {
   try {
     const { status } = req.body;
@@ -216,16 +216,15 @@ router.put('/logs/:logId', authMiddleware, async (req, res) => {
     log.status = status;
     await log.save();
 
-    res.json({ message: `Medicine marked as ${status}`, log });
-  } catch (error) {
-    console.error('Error updating log:', error);
+    res.json({ log });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ message: 'Error updating log' });
   }
 });
 
-
-
 module.exports = router;
+
 
 
 

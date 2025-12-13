@@ -41,6 +41,11 @@ const medicineSchema = new mongoose.Schema({
     type: String,
     maxlength: [500, 'Notes cannot exceed 500 characters'],
     trim: true
+  },
+ // ⭐ OFFLINE STABLE ID
+  clientId: {
+    type: String,
+    index: true
   }
 }, {
   timestamps: true
