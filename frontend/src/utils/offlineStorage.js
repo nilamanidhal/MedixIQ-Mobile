@@ -4,29 +4,48 @@ const QUEUE_KEY = 'offline_mutation_queue';
 const MEDICINE_CACHE_KEY = 'cached_medicines';
 const LOGS_CACHE_KEY = 'cached_medicine_logs';
 
-// --- QUEUE ---
+// --- 1. QUEUE MANAGEMENT (The "To-Do List") ---
+
+// Get the list of actions waiting for internet
 export const getQueue = () => {
   try {
     const queue = localStorage.getItem(QUEUE_KEY);
     return queue ? JSON.parse(queue) : [];
-  } catch (e) { return []; }
+  } catch (e) {
+    console.error("Error reading queue:", e);
+    return [];
+  }
 };
 
+// Add a new action to the queue
 export const addToQueue = (action, data) => {
   try {
     const queue = getQueue();
-    queue.push({ action, data, timestamp: Date.now() });
+    // 'data' will contain the full payload (tempId, medicine details, etc.)
+    queue.push({ 
+        action, 
+        data, 
+        timestamp: Date.now() 
+    });
     localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
-  } catch (e) { console.error(e); }
+  } catch (e) {
+    console.error("Error adding to queue:", e);
+  }
 };
 
+// 🔥 NEW: Update the queue (Used when removing processed items one by one)
 export const saveQueue = (updatedQueue) => {
     localStorage.setItem(QUEUE_KEY, JSON.stringify(updatedQueue));
 };
 
-export const clearQueue = () => localStorage.removeItem(QUEUE_KEY);
+// Clear entire queue (Use with caution)
+export const clearQueue = () => {
+  localStorage.removeItem(QUEUE_KEY);
+};
 
-// --- MEDICINES ---
+
+// --- 2. MEDICINE CACHE (The "Offline List") ---
+
 export const saveMedicinesToCache = (medicines) => {
   localStorage.setItem(MEDICINE_CACHE_KEY, JSON.stringify(medicines));
 };
@@ -35,10 +54,14 @@ export const getCachedMedicines = () => {
   try {
     const cached = localStorage.getItem(MEDICINE_CACHE_KEY);
     return cached ? JSON.parse(cached) : [];
-  } catch (e) { return []; }
+  } catch (e) {
+    return [];
+  }
 };
 
-// --- LOGS ---
+
+// --- 3. 🔥 NEW: LOGS CACHE (The "Offline History") ---
+
 export const saveLogsToCache = (logs) => {
   localStorage.setItem(LOGS_CACHE_KEY, JSON.stringify(logs));
 };
@@ -47,8 +70,74 @@ export const getCachedLogs = () => {
   try {
     const cached = localStorage.getItem(LOGS_CACHE_KEY);
     return cached ? JSON.parse(cached) : [];
-  } catch (e) { return []; }
+  } catch (e) {
+    return [];
+  }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+// // frontend/src/utils/offlineStorage.js
+
+// const QUEUE_KEY = 'offline_mutation_queue';
+// const MEDICINE_CACHE_KEY = 'cached_medicines';
+// const LOGS_CACHE_KEY = 'cached_medicine_logs';
+
+// // --- QUEUE ---
+// export const getQueue = () => {
+//   try {
+//     const queue = localStorage.getItem(QUEUE_KEY);
+//     return queue ? JSON.parse(queue) : [];
+//   } catch (e) { return []; }
+// };
+
+// export const addToQueue = (action, data) => {
+//   try {
+//     const queue = getQueue();
+//     queue.push({ action, data, timestamp: Date.now() });
+//     localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+//   } catch (e) { console.error(e); }
+// };
+
+// export const saveQueue = (updatedQueue) => {
+//     localStorage.setItem(QUEUE_KEY, JSON.stringify(updatedQueue));
+// };
+
+// export const clearQueue = () => localStorage.removeItem(QUEUE_KEY);
+
+// // --- MEDICINES ---
+// export const saveMedicinesToCache = (medicines) => {
+//   localStorage.setItem(MEDICINE_CACHE_KEY, JSON.stringify(medicines));
+// };
+
+// export const getCachedMedicines = () => {
+//   try {
+//     const cached = localStorage.getItem(MEDICINE_CACHE_KEY);
+//     return cached ? JSON.parse(cached) : [];
+//   } catch (e) { return []; }
+// };
+
+// // --- LOGS ---
+// export const saveLogsToCache = (logs) => {
+//   localStorage.setItem(LOGS_CACHE_KEY, JSON.stringify(logs));
+// };
+
+// export const getCachedLogs = () => {
+//   try {
+//     const cached = localStorage.getItem(LOGS_CACHE_KEY);
+//     return cached ? JSON.parse(cached) : [];
+//   } catch (e) { return []; }
+// };
 
 
 

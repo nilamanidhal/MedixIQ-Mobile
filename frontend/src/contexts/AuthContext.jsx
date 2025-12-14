@@ -116,6 +116,11 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('user_data');
         setToken(null);
         setUser(null);
+
+        // 2. 🔥 SECURITY FIX: WIPE ALL OFFLINE DATA
+    localStorage.removeItem('cached_medicines');
+    localStorage.removeItem('cached_medicine_logs');
+    localStorage.removeItem('offline_mutation_queue');
         // Optional: clear any other offline queues here if you want security over convenience
     };
     
