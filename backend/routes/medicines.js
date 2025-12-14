@@ -1,5 +1,6 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
+const mongoose = require('mongoose'); // Required for ID validation
 const Medicine = require('../models/Medicine');
 const MedicineLog = require('../models/MedicineLog');
 const authMiddleware = require('../middleware/auth');
@@ -7,153 +8,46 @@ const authMiddleware = require('../middleware/auth');
 const router = express.Router();
 
 /* =========================================================
-   GET ALL MEDICINES (ONLINE SYNC)
+   🔥 IMPORTANT: SPECIFIC ROUTES MUST COME BEFORE GENERIC ROUTES
+   We place '/logs' routes ABOVE '/:id' routes to prevent conflicts.
    ========================================================= */
-router.get('/', authMiddleware, async (req, res) => {
-  try {
-    const medicines = await Medicine.find({
-      userId: req.user._id,
-      isActive: true
-    }).sort({ createdAt: -1 });
 
-    res.json({ medicines });
+/* ---------------------------------------------------------
+   LOGS ROUTES (Specific)
+   --------------------------------------------------------- */
+
+// 1. GET FULL HISTORY
+router.get('/logs', authMiddleware, async (req, res) => {
+  try {
+    const logs = await MedicineLog.find({ userId: req.user._id })
+      .populate('medicineId', 'name dose')
+      .sort({ createdAt: -1 });
+    res.json({ logs });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Error fetching medicines' });
+    res.status(500).json({ message: 'Error fetching logs' });
   }
 });
 
-/* =========================================================
-   ADD MEDICINE (OFFLINE SAFE / IDEMPOTENT)
-   ========================================================= */
-router.post(
-  '/',
-  authMiddleware,
-  [
-    body('clientId').notEmpty().withMessage('clientId is required'),
-    body('name').notEmpty(),
-    body('dose').notEmpty(),
-    body('times').isArray({ min: 1 }),
-    body('duration.startDate').isISO8601(),
-    body('duration.endDate').isISO8601()
-  ],
-  async (req, res) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-      }
-
-      const { clientId, name, dose, times, duration, notes } = req.body;
-
-      // 🔁 Prevent duplicate creation (important for sync retry)
-      const existing = await Medicine.findOne({
-        userId: req.user._id,
-        clientId
-      });
-
-      if (existing) {
-        return res.json({ medicine: existing });
-      }
-
-      const medicine = new Medicine({
-        userId: req.user._id,
-        clientId,
-        name,
-        dose,
-        times,
-        duration: {
-          startDate: new Date(duration.startDate),
-          endDate: new Date(duration.endDate)
-        },
-        notes
-      });
-
-      await medicine.save();
-      res.status(201).json({ medicine });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: 'Error adding medicine' });
-    }
-  }
-);
-
-/* =========================================================
-   UPDATE MEDICINE
-   ========================================================= */
-router.put('/:id', authMiddleware, async (req, res) => {
-  try {
-    const medicine = await Medicine.findOne({
-      _id: req.params.id,
-      userId: req.user._id
-    });
-
-    if (!medicine) {
-      return res.status(404).json({ message: 'Medicine not found' });
-    }
-
-    Object.assign(medicine, req.body);
-    await medicine.save();
-
-    res.json({ medicine });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error updating medicine' });
-  }
-});
-
-/* =========================================================
-   DELETE MEDICINE (SOFT DELETE)
-   ========================================================= */
-router.delete('/:id', authMiddleware, async (req, res) => {
-  try {
-    const medicine = await Medicine.findOne({
-      _id: req.params.id,
-      userId: req.user._id
-    });
-
-    if (!medicine) {
-      return res.status(404).json({ message: 'Medicine not found' });
-    }
-
-    medicine.isActive = false;
-    await medicine.save();
-
-    res.json({ message: 'Medicine deleted' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error deleting medicine' });
-  }
-});
-
-/* =========================================================
-   ADD / SYNC MEDICINE LOG (🔥 MOST IMPORTANT FIX)
-   ========================================================= */
+// 2. CREATE LOG (From Offline Sync)
 router.post('/logs', authMiddleware, async (req, res) => {
   try {
     const { clientLogId, medicineClientId, status, date, time } = req.body;
 
-    if (!clientLogId || !medicineClientId) {
-      return res.status(400).json({ message: 'Invalid log data' });
+    // 🔁 Idempotency Check
+    const existingLog = await MedicineLog.findOne({ userId: req.user._id, clientLogId });
+    if (existingLog) return res.json({ log: existingLog });
+
+    // 🔎 Find Medicine (Handle both Real ID and Client ID)
+    let medicine;
+    if (mongoose.Types.ObjectId.isValid(medicineClientId)) {
+       medicine = await Medicine.findOne({ _id: medicineClientId, userId: req.user._id });
+    } else {
+       medicine = await Medicine.findOne({ clientId: medicineClientId, userId: req.user._id });
     }
-
-    // 🔁 Prevent duplicate log creation
-    const existingLog = await MedicineLog.findOne({
-      userId: req.user._id,
-      clientLogId
-    });
-
-    if (existingLog) {
-      return res.json({ log: existingLog });
-    }
-
-    // 🔎 Find medicine using clientId (offline-safe)
-    const medicine = await Medicine.findOne({
-      userId: req.user._id,
-      clientId: medicineClientId
-    });
 
     if (!medicine) {
+      // Return 404 so frontend knows to keep it in queue until medicine syncs
       return res.status(404).json({ message: 'Medicine not found for log' });
     }
 
@@ -170,44 +64,23 @@ router.post('/logs', authMiddleware, async (req, res) => {
     await log.save();
     res.status(201).json({ log });
   } catch (err) {
-    console.error(err);
+    console.error("Create Log Error:", err);
     res.status(500).json({ message: 'Error creating log' });
   }
 });
 
-/* =========================================================
-   GET FULL HISTORY (ONLINE ONLY)
-   ========================================================= */
-router.get('/logs', authMiddleware, async (req, res) => {
-  try {
-    const logs = await MedicineLog.find({
-      userId: req.user._id
-    })
-      .populate('medicineId', 'name dose')
-      .sort({ createdAt: -1 });
-
-    res.json({ logs });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error fetching logs' });
-  }
-});
-
-/* =========================================================
-   UPDATE LOG STATUS (TAKEN / MISSED)
-   ========================================================= */
+// 3. UPDATE LOG STATUS
 router.put('/logs/:logId', authMiddleware, async (req, res) => {
   try {
     const { status } = req.body;
+    const { logId } = req.params;
 
-    if (!['taken', 'missed'].includes(status)) {
-      return res.status(400).json({ message: 'Invalid status' });
+    // 🔥 SAFETY CHECK: Prevent Crash on Bad IDs (like '56359')
+    if (!mongoose.Types.ObjectId.isValid(logId)) {
+        return res.status(404).json({ message: 'Invalid Log ID format' });
     }
 
-    const log = await MedicineLog.findOne({
-      _id: req.params.logId,
-      userId: req.user._id
-    });
+    const log = await MedicineLog.findOne({ _id: logId, userId: req.user._id });
 
     if (!log) {
       return res.status(404).json({ message: 'Log not found' });
@@ -218,12 +91,343 @@ router.put('/logs/:logId', authMiddleware, async (req, res) => {
 
     res.json({ log });
   } catch (err) {
-    console.error(err);
+    console.error("Update Log Error:", err);
     res.status(500).json({ message: 'Error updating log' });
   }
 });
 
+
+/* ---------------------------------------------------------
+   MEDICINE ROUTES (Generic)
+   --------------------------------------------------------- */
+
+// GET ALL MEDICINES
+router.get('/', authMiddleware, async (req, res) => {
+  try {
+    const medicines = await Medicine.find({ userId: req.user._id, isActive: true }).sort({ createdAt: -1 });
+    res.json({ medicines });
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching medicines' });
+  }
+});
+
+// ADD MEDICINE
+router.post('/', authMiddleware, [
+    body('name').notEmpty(),
+    body('dose').notEmpty(),
+    body('times').isArray({ min: 1 }),
+    body('duration.startDate').isISO8601(),
+    body('duration.endDate').isISO8601()
+  ], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+    const { clientId, name, dose, times, duration, notes } = req.body;
+
+    // Idempotency Check
+    const existing = await Medicine.findOne({ userId: req.user._id, clientId });
+    if (existing) return res.json({ medicine: existing });
+
+    const medicine = new Medicine({
+      userId: req.user._id,
+      clientId,
+      name,
+      dose,
+      times,
+      duration: { startDate: new Date(duration.startDate), endDate: new Date(duration.endDate) },
+      notes
+    });
+
+    await medicine.save();
+    res.status(201).json({ medicine });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error adding medicine' });
+  }
+});
+
+// GET SINGLE MEDICINE (Must be at the bottom because :id captures everything!)
+router.get('/:id', authMiddleware, async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(404).json({ message: 'Invalid ID' });
+    
+    const medicine = await Medicine.findOne({ _id: req.params.id, userId: req.user._id });
+    if (!medicine) return res.status(404).json({ message: 'Medicine not found' });
+
+    res.json({ medicine });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// UPDATE MEDICINE
+router.put('/:id', authMiddleware, async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(404).json({ message: 'Invalid ID' });
+
+    const medicine = await Medicine.findOne({ _id: req.params.id, userId: req.user._id });
+    if (!medicine) return res.status(404).json({ message: 'Medicine not found' });
+
+    Object.assign(medicine, req.body);
+    await medicine.save();
+    res.json({ medicine });
+  } catch (err) {
+    res.status(500).json({ message: 'Error updating medicine' });
+  }
+});
+
+// DELETE MEDICINE
+router.delete('/:id', authMiddleware, async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(404).json({ message: 'Invalid ID' });
+
+    const medicine = await Medicine.findOne({ _id: req.params.id, userId: req.user._id });
+    if (!medicine) return res.status(404).json({ message: 'Medicine not found' });
+
+    medicine.isActive = false;
+    await medicine.save();
+    res.json({ message: 'Medicine deleted' });
+  } catch (err) {
+    res.status(500).json({ message: 'Error deleting medicine' });
+  }
+});
+
 module.exports = router;
+
+
+
+
+
+
+
+
+// const express = require('express');
+// const { body, validationResult } = require('express-validator');
+// const Medicine = require('../models/Medicine');
+// const MedicineLog = require('../models/MedicineLog');
+// const authMiddleware = require('../middleware/auth');
+
+// const router = express.Router();
+
+// /* =========================================================
+//    GET ALL MEDICINES (ONLINE SYNC)
+//    ========================================================= */
+// router.get('/', authMiddleware, async (req, res) => {
+//   try {
+//     const medicines = await Medicine.find({
+//       userId: req.user._id,
+//       isActive: true
+//     }).sort({ createdAt: -1 });
+
+//     res.json({ medicines });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: 'Error fetching medicines' });
+//   }
+// });
+
+// /* =========================================================
+//    ADD MEDICINE (OFFLINE SAFE / IDEMPOTENT)
+//    ========================================================= */
+// router.post(
+//   '/',
+//   authMiddleware,
+//   [
+//     body('clientId').notEmpty().withMessage('clientId is required'),
+//     body('name').notEmpty(),
+//     body('dose').notEmpty(),
+//     body('times').isArray({ min: 1 }),
+//     body('duration.startDate').isISO8601(),
+//     body('duration.endDate').isISO8601()
+//   ],
+//   async (req, res) => {
+//     try {
+//       const errors = validationResult(req);
+//       if (!errors.isEmpty()) {
+//         return res.status(400).json({ errors: errors.array() });
+//       }
+
+//       const { clientId, name, dose, times, duration, notes } = req.body;
+
+//       // 🔁 Prevent duplicate creation (important for sync retry)
+//       const existing = await Medicine.findOne({
+//         userId: req.user._id,
+//         clientId
+//       });
+
+//       if (existing) {
+//         return res.json({ medicine: existing });
+//       }
+
+//       const medicine = new Medicine({
+//         userId: req.user._id,
+//         clientId,
+//         name,
+//         dose,
+//         times,
+//         duration: {
+//           startDate: new Date(duration.startDate),
+//           endDate: new Date(duration.endDate)
+//         },
+//         notes
+//       });
+
+//       await medicine.save();
+//       res.status(201).json({ medicine });
+//     } catch (err) {
+//       console.error(err);
+//       res.status(500).json({ message: 'Error adding medicine' });
+//     }
+//   }
+// );
+
+// /* =========================================================
+//    UPDATE MEDICINE
+//    ========================================================= */
+// router.put('/:id', authMiddleware, async (req, res) => {
+//   try {
+//     const medicine = await Medicine.findOne({
+//       _id: req.params.id,
+//       userId: req.user._id
+//     });
+
+//     if (!medicine) {
+//       return res.status(404).json({ message: 'Medicine not found' });
+//     }
+
+//     Object.assign(medicine, req.body);
+//     await medicine.save();
+
+//     res.json({ medicine });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: 'Error updating medicine' });
+//   }
+// });
+
+// /* =========================================================
+//    DELETE MEDICINE (SOFT DELETE)
+//    ========================================================= */
+// router.delete('/:id', authMiddleware, async (req, res) => {
+//   try {
+//     const medicine = await Medicine.findOne({
+//       _id: req.params.id,
+//       userId: req.user._id
+//     });
+
+//     if (!medicine) {
+//       return res.status(404).json({ message: 'Medicine not found' });
+//     }
+
+//     medicine.isActive = false;
+//     await medicine.save();
+
+//     res.json({ message: 'Medicine deleted' });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: 'Error deleting medicine' });
+//   }
+// });
+
+// /* =========================================================
+//    ADD / SYNC MEDICINE LOG (🔥 MOST IMPORTANT FIX)
+//    ========================================================= */
+// router.post('/logs', authMiddleware, async (req, res) => {
+//   try {
+//     const { clientLogId, medicineClientId, status, date, time } = req.body;
+
+//     if (!clientLogId || !medicineClientId) {
+//       return res.status(400).json({ message: 'Invalid log data' });
+//     }
+
+//     // 🔁 Prevent duplicate log creation
+//     const existingLog = await MedicineLog.findOne({
+//       userId: req.user._id,
+//       clientLogId
+//     });
+
+//     if (existingLog) {
+//       return res.json({ log: existingLog });
+//     }
+
+//     // 🔎 Find medicine using clientId (offline-safe)
+//     const medicine = await Medicine.findOne({
+//       userId: req.user._id,
+//       clientId: medicineClientId
+//     });
+
+//     if (!medicine) {
+//       return res.status(404).json({ message: 'Medicine not found for log' });
+//     }
+
+//     const log = new MedicineLog({
+//       userId: req.user._id,
+//       clientLogId,
+//       medicineClientId,
+//       medicineId: medicine._id,
+//       status,
+//       date: new Date(date),
+//       time
+//     });
+
+//     await log.save();
+//     res.status(201).json({ log });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: 'Error creating log' });
+//   }
+// });
+
+// /* =========================================================
+//    GET FULL HISTORY (ONLINE ONLY)
+//    ========================================================= */
+// router.get('/logs', authMiddleware, async (req, res) => {
+//   try {
+//     const logs = await MedicineLog.find({
+//       userId: req.user._id
+//     })
+//       .populate('medicineId', 'name dose')
+//       .sort({ createdAt: -1 });
+
+//     res.json({ logs });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: 'Error fetching logs' });
+//   }
+// });
+
+// /* =========================================================
+//    UPDATE LOG STATUS (TAKEN / MISSED)
+//    ========================================================= */
+// router.put('/logs/:logId', authMiddleware, async (req, res) => {
+//   try {
+//     const { status } = req.body;
+
+//     if (!['taken', 'missed'].includes(status)) {
+//       return res.status(400).json({ message: 'Invalid status' });
+//     }
+
+//     const log = await MedicineLog.findOne({
+//       _id: req.params.logId,
+//       userId: req.user._id
+//     });
+
+//     if (!log) {
+//       return res.status(404).json({ message: 'Log not found' });
+//     }
+
+//     log.status = status;
+//     await log.save();
+
+//     res.json({ log });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: 'Error updating log' });
+//   }
+// });
+
+// module.exports = router;
 
 
 
