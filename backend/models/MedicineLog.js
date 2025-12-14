@@ -15,9 +15,7 @@ const medicineLogSchema = new mongoose.Schema({
   },
   date: { type: Date, required: true },  // scheduled date
   time: { type: String, required: true }, // scheduled time (HH:mm)
-  status: { type: String, enum: ['pending', 'taken', 'missed'], default: 'pending' },
-  clientLogId: String,
-medicineClientId: String
+  status: { type: String, enum: ['pending', 'taken', 'missed'], default: 'pending' }
 }, { timestamps: true });
 
 module.exports = mongoose.model('MedicineLog', medicineLogSchema);

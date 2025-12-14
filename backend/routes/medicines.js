@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const mongoose = require('mongoose'); // Required for ID validation
+const mongoose = require('mongoose');
 const Medicine = require('../models/Medicine');
 const MedicineLog = require('../models/MedicineLog');
 const authMiddleware = require('../middleware/auth');
@@ -32,15 +32,14 @@ router.get('/logs', authMiddleware, async (req, res) => {
 // 2. CREATE LOG (From Offline Sync)
 router.post('/logs', authMiddleware, async (req, res) => {
   try {
-   const { clientLogId, medicineClientId, status, date, time } = req.body;
+    const { clientLogId, medicineClientId, status, date, time } = req.body;
 
     // 🔎 Find medicine using clientId (offline-safe) OR real _id
-    // 🔥 FIX: Check BOTH fields to be safe
     const medicine = await Medicine.findOne({
       userId: req.user._id,
       $or: [
           { clientId: medicineClientId },
-          { _id: (medicineClientId.match(/^[0-9a-fA-F]{24}$/) ? medicineClientId : null) }
+          { _id: (medicineClientId && medicineClientId.match(/^[0-9a-fA-F]{24}$/) ? medicineClientId : null) }
       ]
     });
 
@@ -49,6 +48,20 @@ router.post('/logs', authMiddleware, async (req, res) => {
       return res.status(404).json({ message: 'Medicine not found for log' });
     }
 
+    // 🔁 Idempotency Check: Does this log already exist?
+    // 🔥 FIX: Renamed variable to 'existingLog' to avoid conflict
+    const existingLog = await MedicineLog.findOne({ userId: req.user._id, clientLogId });
+
+    if (existingLog) {
+      // If log exists but status is different, update it
+      if (existingLog.status !== status) {
+          existingLog.status = status;
+          await existingLog.save();
+      }
+      return res.json({ log: existingLog });
+    }
+
+    // Create New Log
     const log = new MedicineLog({
       userId: req.user._id,
       clientLogId,
@@ -61,6 +74,7 @@ router.post('/logs', authMiddleware, async (req, res) => {
 
     await log.save();
     res.status(201).json({ log });
+
   } catch (err) {
     console.error("Create Log Error:", err);
     res.status(500).json({ message: 'Error creating log' });
@@ -73,7 +87,7 @@ router.put('/logs/:logId', authMiddleware, async (req, res) => {
     const { status } = req.body;
     const { logId } = req.params;
 
-    // 🔥 SAFETY CHECK: Prevent Crash on Bad IDs (like '56359')
+    // 🔥 SAFETY CHECK: Prevent Crash on Bad IDs
     if (!mongoose.Types.ObjectId.isValid(logId)) {
         return res.status(404).json({ message: 'Invalid Log ID format' });
     }
