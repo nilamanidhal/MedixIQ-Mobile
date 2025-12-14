@@ -32,19 +32,17 @@ router.get('/logs', authMiddleware, async (req, res) => {
 // 2. CREATE LOG (From Offline Sync)
 router.post('/logs', authMiddleware, async (req, res) => {
   try {
-    const { clientLogId, medicineClientId, status, date, time } = req.body;
+   const { clientLogId, medicineClientId, status, date, time } = req.body;
 
-    // 🔁 Idempotency Check
-    const existingLog = await MedicineLog.findOne({ userId: req.user._id, clientLogId });
-    if (existingLog) return res.json({ log: existingLog });
-
-    // 🔎 Find Medicine (Handle both Real ID and Client ID)
-    let medicine;
-    if (mongoose.Types.ObjectId.isValid(medicineClientId)) {
-       medicine = await Medicine.findOne({ _id: medicineClientId, userId: req.user._id });
-    } else {
-       medicine = await Medicine.findOne({ clientId: medicineClientId, userId: req.user._id });
-    }
+    // 🔎 Find medicine using clientId (offline-safe) OR real _id
+    // 🔥 FIX: Check BOTH fields to be safe
+    const medicine = await Medicine.findOne({
+      userId: req.user._id,
+      $or: [
+          { clientId: medicineClientId },
+          { _id: (medicineClientId.match(/^[0-9a-fA-F]{24}$/) ? medicineClientId : null) }
+      ]
+    });
 
     if (!medicine) {
       // Return 404 so frontend knows to keep it in queue until medicine syncs
