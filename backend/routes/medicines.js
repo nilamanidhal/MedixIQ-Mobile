@@ -8,13 +8,8 @@ const authMiddleware = require('../middleware/auth');
 const router = express.Router();
 
 /* =========================================================
-   🔥 IMPORTANT: SPECIFIC ROUTES MUST COME BEFORE GENERIC ROUTES
-   We place '/logs' routes ABOVE '/:id' routes to prevent conflicts.
-   ========================================================= */
-
-/* ---------------------------------------------------------
    LOGS ROUTES (Specific)
-   --------------------------------------------------------- */
+   ========================================================= */
 
 // 1. GET FULL HISTORY
 router.get('/logs', authMiddleware, async (req, res) => {
@@ -34,7 +29,7 @@ router.post('/logs', authMiddleware, async (req, res) => {
   try {
     const { clientLogId, medicineClientId, status, date, time } = req.body;
 
-    // 🔎 Find medicine using clientId (offline-safe) OR real _id
+    // 🔎 Find Medicine (Handle both Real ID and Client ID)
     const medicine = await Medicine.findOne({
       userId: req.user._id,
       $or: [
@@ -44,16 +39,21 @@ router.post('/logs', authMiddleware, async (req, res) => {
     });
 
     if (!medicine) {
-      // Return 404 so frontend knows to keep it in queue until medicine syncs
       return res.status(404).json({ message: 'Medicine not found for log' });
     }
 
     // 🔁 Idempotency Check: Does this log already exist?
-    // 🔥 FIX: Renamed variable to 'existingLog' to avoid conflict
-    const existingLog = await MedicineLog.findOne({ userId: req.user._id, clientLogId });
+    // We check by clientLogId OR by date/time/medicine combo to prevent duplicates
+    let existingLog = await MedicineLog.findOne({ 
+        userId: req.user._id, 
+        $or: [
+            { clientLogId: clientLogId },
+            { medicineId: medicine._id, date: new Date(date), time: time }
+        ]
+    });
 
     if (existingLog) {
-      // If log exists but status is different, update it
+      // If log exists, UPDATE the status!
       if (existingLog.status !== status) {
           existingLog.status = status;
           await existingLog.save();
@@ -87,7 +87,7 @@ router.put('/logs/:logId', authMiddleware, async (req, res) => {
     const { status } = req.body;
     const { logId } = req.params;
 
-    // 🔥 SAFETY CHECK: Prevent Crash on Bad IDs
+    // Handle temporary/invalid IDs gracefully
     if (!mongoose.Types.ObjectId.isValid(logId)) {
         return res.status(404).json({ message: 'Invalid Log ID format' });
     }
@@ -159,50 +159,38 @@ router.post('/', authMiddleware, [
   }
 });
 
-// GET SINGLE MEDICINE (Must be at the bottom because :id captures everything!)
+// GET SINGLE MEDICINE
 router.get('/:id', authMiddleware, async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(404).json({ message: 'Invalid ID' });
-    
     const medicine = await Medicine.findOne({ _id: req.params.id, userId: req.user._id });
     if (!medicine) return res.status(404).json({ message: 'Medicine not found' });
-
     res.json({ medicine });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error' });
-  }
+  } catch (error) { res.status(500).json({ message: 'Server error' }); }
 });
 
 // UPDATE MEDICINE
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(404).json({ message: 'Invalid ID' });
-
     const medicine = await Medicine.findOne({ _id: req.params.id, userId: req.user._id });
     if (!medicine) return res.status(404).json({ message: 'Medicine not found' });
-
     Object.assign(medicine, req.body);
     await medicine.save();
     res.json({ medicine });
-  } catch (err) {
-    res.status(500).json({ message: 'Error updating medicine' });
-  }
+  } catch (err) { res.status(500).json({ message: 'Error updating medicine' }); }
 });
 
 // DELETE MEDICINE
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(404).json({ message: 'Invalid ID' });
-
     const medicine = await Medicine.findOne({ _id: req.params.id, userId: req.user._id });
     if (!medicine) return res.status(404).json({ message: 'Medicine not found' });
-
     medicine.isActive = false;
     await medicine.save();
     res.json({ message: 'Medicine deleted' });
-  } catch (err) {
-    res.status(500).json({ message: 'Error deleting medicine' });
-  }
+  } catch (err) { res.status(500).json({ message: 'Error deleting medicine' }); }
 });
 
 module.exports = router;
