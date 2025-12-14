@@ -54,7 +54,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/medimind'
 .then(() => {
   console.log('Connected to MongoDB');
   // Start cron jobs after DB connection
-  startCronJobs();
+  // startCronJobs();
 })
 .catch(err => console.error('MongoDB connection error:', err));
 
