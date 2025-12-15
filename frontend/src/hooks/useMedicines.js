@@ -142,7 +142,17 @@ export const useMedicines = () => {
                 } catch(e) { /* ignore */ }
 
                 // --- MERGE MEDICINES ---
-                const localTempMeds = sortedMeds.filter(m => m._id.toString().startsWith('temp_'));
+           const localTempMeds = sortedMeds.filter(localM => {
+                    // Check if this is a temp item
+                    if (!localM._id.toString().startsWith('temp_')) return false;
+                    
+                    // Check if this temp item is already present in server data
+                    const alreadySynced = serverMedicines.some(serverM => serverM.clientId === localM._id);
+                    
+                    // Only keep it if it is NOT on the server yet
+                    return !alreadySynced;
+                });
+                
                 const mergedMeds = [...localTempMeds, ...serverMedicines]
                     .filter((v,i,a)=>a.findIndex(v2=>(v2._id===v._id))===i)
                     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
@@ -574,7 +584,7 @@ const updateLogStatus = async (logId, statusVal) => {
         medicines, logs, loading, 
         fetchMedicines: loadData, fetchFullHistory,
         addMedicine, updateMedicine, deleteMedicine, 
-        handleNotificationAction, addManualLog, updateLogStatus, syncOfflineData, fetchLogs 
+        handleNotificationAction, addManualLog, updateLogStatus, syncOfflineData, fetchLogs
     };
 };
 
