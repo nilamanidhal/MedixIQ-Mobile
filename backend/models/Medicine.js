@@ -46,7 +46,11 @@ const medicineSchema = new mongoose.Schema({
   clientId: {
     type: String,
     index: true
-  }
+  },
+  // 🔥 NEW FIELDS FOR PAUSE & MUTE
+  isMuted: { type: Boolean, default: false }, // Silent Mode
+  isPaused: { type: Boolean, default: false }, // Treatment Suspended
+  pausedDate: { type: Date, default: null }    // Timestamp when pause started
 }, {
   timestamps: true
 });
