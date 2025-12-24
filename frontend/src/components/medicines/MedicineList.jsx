@@ -4,7 +4,7 @@ import LoadingSpinner from '../LoadingSpinner';
 import { scheduleMedicineReminder, cancelAllAlarms } from '../../utils/LocalNotificationManager';
 
 const MedicineList = ({ onEdit }) => {
-    const { medicines, loading, deleteMedicine } = useMedicines();
+    const { medicines, loading, deleteMedicine, toggleMuteMedicine, togglePauseMedicine } = useMedicines();
     const [isSyncing, setIsSyncing] = useState(false);
 
     const handleResyncAlarms = async () => {
@@ -25,6 +25,19 @@ const MedicineList = ({ onEdit }) => {
     const handleDelete = async (id, name) => {
         if (window.confirm(`Are you sure you want to delete ${name}?`)) {
             await deleteMedicine(id);
+        }
+    };
+
+    const handlePauseResume = async (id, isPaused, name) => {
+        if (!isPaused) {
+            // Currently Active -> Pausing
+            if (window.confirm(`Pause reminders for ${name}? You won't receive notifications until you resume.`)) {
+                await togglePauseMedicine(id);
+            }
+        } else {
+            // Currently Paused -> Resuming
+            const extend = window.confirm(`Resume ${name}? \n\nClick OK to EXTEND duration by pause time.\nClick Cancel to RESUME without extending.`);
+            await togglePauseMedicine(id, extend);
         }
     };
 
@@ -74,22 +87,28 @@ const MedicineList = ({ onEdit }) => {
                 const expired = isExpired(endDate);
                 const active = isActive(startDate, endDate);
                 const isOffline = medicine.pendingSync === true;
+                const isPaused = medicine.isPaused === true;
+                const isMuted = medicine.isMuted === true;
 
                 return (
-                    <div key={medicine._id} className={`bg-white rounded-lg shadow-md p-6 border-l-4 relative ${isOffline ? 'border-gray-400 bg-gray-50' : expired ? 'border-red-400' : 'border-green-400'}`}>
+                    <div key={medicine._id} className={`bg-white rounded-lg shadow-md p-6 border-l-4 relative ${isPaused ? 'border-gray-400 opacity-80' : isOffline ? 'border-gray-400 bg-gray-50' : expired ? 'border-red-400' : 'border-green-400'}`}>
                         
-                        {/* Offline Badge */}
-                        {isOffline && (
-                            <div className="absolute top-2 right-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full flex items-center shadow-sm font-medium border border-yellow-200">
-                                ⏳ Waiting for Internet
-                            </div>
-                        )}
+                        {/* Status Badges */}
+                        <div className="absolute top-2 right-2 flex space-x-1">
+                            {isPaused && <span className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded-full font-bold">⏸️ PAUSED</span>}
+                            {isMuted && <span className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-full font-bold">🔇 SILENT</span>}
+                            {isOffline && (
+                                <div className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full flex items-center shadow-sm font-medium border border-yellow-200">
+                                    ⏳ Waiting for Internet
+                                </div>
+                            )}
+                        </div>
 
                         <div className="flex justify-between items-start">
                             <div className="flex-1">
                                 <div className="flex items-center space-x-3">
                                     <h3 className="text-lg font-semibold text-gray-900">{medicine.name || 'Unknown Medicine'}</h3>
-                                    {!isOffline && (
+                                    {!isOffline && !isPaused && (
                                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${expired ? 'bg-red-100 text-red-800' : active ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                                             {expired ? 'Expired' : active ? 'Active' : 'Upcoming'}
                                         </span>
@@ -110,8 +129,23 @@ const MedicineList = ({ onEdit }) => {
                                 </div>
                             </div>
                             
-                            <div className="flex flex-col space-y-2 ml-4">
-                                {/* 🔥 BUTTONS ARE NOW ALWAYS ENABLED */}
+                            <div className="flex flex-col space-y-2 ml-4 mt-6">
+                                {/* Mute Button */}
+                                <button 
+                                    onClick={() => toggleMuteMedicine(medicine._id)}
+                                    className={`px-3 py-1 font-medium text-sm border rounded flex items-center justify-center ${isMuted ? 'bg-purple-50 text-purple-700 border-purple-300' : 'text-gray-600 border-gray-300 hover:bg-gray-50'}`}
+                                >
+                                    {isMuted ? '🔊 Unmute' : '🔇 Mute'}
+                                </button>
+
+                                {/* Pause/Resume Button */}
+                                <button 
+                                    onClick={() => handlePauseResume(medicine._id, isPaused, medicine.name)}
+                                    className={`px-3 py-1 font-medium text-sm border rounded flex items-center justify-center ${isPaused ? 'bg-green-50 text-green-700 border-green-300' : 'text-orange-600 border-orange-300 hover:bg-orange-50'}`}
+                                >
+                                    {isPaused ? '▶️ Resume' : '⏸️ Pause'}
+                                </button>
+
                                 <button 
                                     onClick={() => onEdit(medicine)} 
                                     className="px-3 py-1 font-medium text-sm border rounded text-blue-600 border-blue-300 hover:bg-blue-50"

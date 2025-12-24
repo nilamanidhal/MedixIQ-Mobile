@@ -1,135 +1,221 @@
 import { LocalNotifications } from '@capacitor/local-notifications';
 
-export const cancelMedicineReminders = async (medicineId) => {
-  try {
-    const pending = await LocalNotifications.getPending();
-    const matching = pending.notifications.filter(n => n.extra && n.extra.medicineId === medicineId);
-    if (matching.length > 0) {
-        await LocalNotifications.cancel({ notifications: matching });
+// --- HELPER: Generate Stable Numeric ID from String ---
+// This ensures that "MedA" always generates the same number, avoiding ID conflicts.
+const hashCode = (str) => {
+    let hash = 0;
+    if (str.length === 0) return hash;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
     }
-  } catch (err) { console.error("Error cancelling:", err); }
+    return Math.abs(hash); // Ensure positive number
 };
 
+// 1. Request Permissions & Create Channels
+export const requestPermissions = async () => {
+    try {
+        const perm = await LocalNotifications.requestPermissions();
+        if (perm.display !== 'granted') {
+            console.warn("User denied notification permissions");
+            return false;
+        }
+
+        // 🔥 CHANGED TO V5 TO FORCE RESET SETTINGS
+        
+        // Channel A: LOUD (Sound ON)
+        await LocalNotifications.createChannel({
+            id: 'medmind_alarm_v5', 
+            name: 'Medicine Alarms (Sound)',
+            description: 'High priority alarms with sound',
+            importance: 5, // High Importance (Heads Up + Sound)
+            visibility: 1,
+            sound: 'alarm_sound.wav',
+            vibration: true,
+        });
+
+        // Channel B: SILENT (Sound OFF)
+        await LocalNotifications.createChannel({
+            id: 'medmind_silent_v5', 
+            name: 'Medicine Alarms (Silent)',
+            description: 'Visual notifications without sound',
+            importance: 4, // High (Heads Up) but we remove sound manually
+            visibility: 1,
+            sound: null,
+            vibration: false,
+        });
+
+        return true;
+    } catch (error) {
+        console.error("Error creating channels:", error);
+        return false;
+    }
+};
+
+// 2. Cancel Reminders
+export const cancelMedicineReminders = async (medicineId) => {
+    try {
+        const pending = await LocalNotifications.getPending();
+        const matching = pending.notifications.filter(n =>
+            n.extra && (n.extra.medicineId === medicineId || n.extra.medicineId._id === medicineId)
+        );
+
+        if (matching.length > 0) {
+            const toCancel = matching.map(n => ({ id: n.id }));
+            await LocalNotifications.cancel({ notifications: toCancel });
+            console.log(`Cancelled ${matching.length} alarms for ID: ${medicineId}`);
+        }
+    } catch (err) { console.error("Error cancelling:", err); }
+};
+
+// 3. Cancel All
 export const cancelAllAlarms = async () => {
     try {
         const pending = await LocalNotifications.getPending();
         if (pending.notifications.length > 0) {
             await LocalNotifications.cancel(pending);
-            alert("All alarms cleared.");
+            console.log("All alarms cleared.");
+        } else {
+            console.log("No alarms to clear.");
         }
     } catch (err) { console.error(err); }
 };
 
+// 4. Reschedule Snooze
 export const rescheduleSnooze = async (originalNotification) => {
     const TEN_MINUTES_MS = 10 * 60 * 1000;
     const snoozeTime = new Date(Date.now() + TEN_MINUTES_MS);
+    
     const { id, title, body, extra, channelId, sound, actionTypeId } = originalNotification;
-    const snoozeId = parseInt(id) + 500000; 
+    
+    // Create unique snooze ID
+    const snoozeId = (parseInt(id) + 500000) % 2147483647;
 
     try {
         await LocalNotifications.schedule({
             notifications: [{
                 title: `${title} (Snoozed)`,
                 body: body,
-                id: snoozeId, 
-                schedule: { at: snoozeTime, allowWhileIdle: true }, 
-                channelId, sound, actionTypeId, extra
+                id: snoozeId,
+                schedule: { at: snoozeTime, allowWhileIdle: true },
+                channelId: channelId, 
+                sound: sound,
+                actionTypeId: actionTypeId,
+                extra: extra
             }]
         });
         console.log(`✅ Snoozed until ${snoozeTime.toLocaleTimeString()}`);
     } catch (error) { console.error("Snooze Error:", error); }
 };
 
+// 5. Schedule Medicine Reminders
 export const scheduleMedicineReminder = async (medicine) => {
-  try {
-    if (!medicine || !medicine.duration || !medicine.duration.endDate) return;
+    try {
+        // Validation
+        if (!medicine || !medicine.duration || !medicine.duration.endDate) {
+            console.warn("Cannot schedule: Missing medicine data.");
+            return;
+        }
 
-    // 1. Register Actions (Ensure they exist)
-    await LocalNotifications.registerActionTypes({
-      types: [{
-          id: 'MEDICINE_ACTIONS', 
-          actions: [
-            { id: 'taken', title: '✅ Taken', foreground: true },
-            { id: 'missed', title: '❌ Missed', foreground: true, destructive: true },
-            { id: 'snooze', title: '💤 Snooze 10m', foreground: false }
-          ]
-      }]
-    });
+        // 🛑 PAUSE CHECK
+        if (medicine.isPaused) {
+            // Ensure we cancel any existing alarms if paused
+            if (medicine._id) await cancelMedicineReminders(medicine._id);
+            console.log(`⏸️ Medicine ${medicine.name} is paused. Alarms cancelled.`);
+            return;
+        }
 
-    // 2. Cancel old alarms
-    if (medicine._id) await cancelMedicineReminders(medicine._id);
+        // 1. Ensure Channels Exist (Create V5)
+        const hasPermission = await requestPermissions();
+        if (!hasPermission) return;
 
-    // 3. Permission & Channel
-    const perm = await LocalNotifications.checkPermissions();
-    if (perm.display !== 'granted') await LocalNotifications.requestPermissions();
+        // 2. Cancel old alarms to avoid duplicates
+        if (medicine._id) await cancelMedicineReminders(medicine._id);
 
-    await LocalNotifications.createChannel({
-        id: 'medmind_alarm_v3', 
-        name: 'Medicine Alarms High Priority',
-        importance: 5,
-        visibility: 1,
-        vibration: true,
-        sound: 'alarm_sound.wav', 
-    });
+        // 3. Register Actions
+        await LocalNotifications.registerActionTypes({
+            types: [{
+                id: 'MEDICINE_ACTIONS',
+                actions: [
+                    { id: 'taken_action', title: '✅ Taken', foreground: true },
+                    { id: 'skip_action', title: '❌ Missed', foreground: true, destructive: true },
+                    { id: 'snooze', title: '💤 Snooze 10m', foreground: false }
+                ]
+            }]
+        });
 
-    const notificationsToSchedule = [];
-    
-    // 4. Date Logic
-    const today = new Date();
-    today.setHours(0,0,0,0);
+        const notificationsToSchedule = [];
+        const now = new Date();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
-    const startDate = new Date(medicine.duration.startDate);
-    startDate.setHours(0,0,0,0);
+        const startDate = new Date(medicine.duration.startDate);
+        startDate.setHours(0, 0, 0, 0);
 
-    const endDate = new Date(medicine.duration.endDate);
-    endDate.setHours(0,0,0,0); // IMPORTANT: Ensure time is 00:00:00
+        const endDate = new Date(medicine.duration.endDate);
+        endDate.setHours(23, 59, 59, 999);
 
-    if (today > endDate) {
-        console.log(`Skipping expired medicine: ${medicine.name}`);
-        return;
-    }
+        if (today > endDate) {
+            console.log(`Skipping expired medicine: ${medicine.name}`);
+            return;
+        }
 
-    let currentDate = startDate > today ? startDate : today;
-    const MAX_DAYS_AHEAD = 45; 
-    let daysScheduled = 0;
+        let currentDate = startDate > today ? startDate : today;
+        const MAX_DAYS_AHEAD = 45;
+        let daysScheduled = 0;
 
-    while (currentDate <= endDate && daysScheduled < MAX_DAYS_AHEAD) {
-        medicine.times.forEach((timeString, index) => {
-            const [hours, minutes] = timeString.split(':').map(Number);
-            const triggerTime = new Date(currentDate);
-            triggerTime.setHours(hours, minutes, 0, 0);
+        // 🔥 CHOOSE CHANNEL
+        const isMuted = medicine.isMuted === true; 
+        const targetChannel = isMuted ? 'medmind_silent_v5' : 'medmind_alarm_v5';
+        const targetSound = isMuted ? null : 'alarm_sound.wav';
 
-            // Only schedule if time is in future
-            if (triggerTime > new Date()) {
-                const uniqueId = (new Date().getTime() % 10000000) + (daysScheduled * 100) + index;
-                
-                notificationsToSchedule.push({
-                    title: `Time to take ${medicine.name}`,
-                    body: `Dosage: ${medicine.dose}`,
-                    id: uniqueId,
-                    schedule: { at: triggerTime,
-                                allowWhileIdle: true },
-                    channelId: 'medmind_alarm_v3',
-                    sound: 'alarm_sound.wav',
-                    actionTypeId: 'MEDICINE_ACTIONS',
-                    extra: { 
-                        medicineId: medicine._id,
-                        medicineName: medicine.name,
-                        scheduledTime: triggerTime.toISOString()
+        console.log(`📅 Scheduling ${medicine.name} | Muted: ${isMuted} | Channel: ${targetChannel}`);
+
+        while (currentDate <= endDate && daysScheduled < MAX_DAYS_AHEAD) {
+            if (medicine.times && Array.isArray(medicine.times)) {
+                medicine.times.forEach((timeString, index) => {
+                    const [hours, minutes] = timeString.split(':').map(Number);
+                    
+                    const triggerTime = new Date(currentDate);
+                    triggerTime.setHours(hours, minutes, 0, 0);
+
+                    if (triggerTime > now) {
+                        // 🔐 ROBUST ID GENERATION (Replaces risky parseInt)
+                        const baseId = hashCode(medicine._id.toString()); 
+                        const uniqueId = (baseId + daysScheduled * 100 + index) % 2147483647;
+
+                        notificationsToSchedule.push({
+                            id: uniqueId,
+                            title: `Time to take ${medicine.name}`,
+                            body: `Dosage: ${medicine.dose}`,
+                            schedule: { at: triggerTime, allowWhileIdle: true },
+                            channelId: targetChannel, 
+                            sound: targetSound,
+                            actionTypeId: 'MEDICINE_ACTIONS',
+                            extra: {
+                                medicineId: medicine._id,
+                                medicineName: medicine.name,
+                                scheduledTime: triggerTime.toISOString()
+                            }
+                        });
                     }
                 });
             }
-        });
-        currentDate.setDate(currentDate.getDate() + 1);
-        daysScheduled++;
-    }
+            currentDate.setDate(currentDate.getDate() + 1);
+            daysScheduled++;
+        }
 
-    if (notificationsToSchedule.length > 0) {
-        await LocalNotifications.schedule({ notifications: notificationsToSchedule });
-        console.log(`✅ Scheduled ${notificationsToSchedule.length} alarms for ${medicine.name}`);
-    }
+        if (notificationsToSchedule.length > 0) {
+            await LocalNotifications.schedule({ notifications: notificationsToSchedule });
+            console.log(`✅ SUCCESS: Scheduled ${notificationsToSchedule.length} alarms for ${medicine.name}`);
+        } else {
+            console.warn(`⚠️ No future times found for ${medicine.name}.`);
+        }
 
-  } catch (error) { console.error("Schedule Error:", error); }
+    } catch (error) { 
+        console.error("Schedule Error:", error); 
+    }
 };
 
 

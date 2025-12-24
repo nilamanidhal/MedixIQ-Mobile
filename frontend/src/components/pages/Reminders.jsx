@@ -3,7 +3,7 @@ import { useMedicines } from '../../hooks/useMedicines';
 import LoadingSpinner from '../LoadingSpinner';
 
 const Reminders = () => {
-  const { medicines, loading, fetchMedicines } = useMedicines();
+  const { medicines, loading, fetchMedicines, toggleMuteMedicine } = useMedicines();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [upcomingReminders, setUpcomingReminders] = useState([]);
 
@@ -25,55 +25,52 @@ const Reminders = () => {
     }
   }, [medicines, currentTime]);
 
-const generateUpcomingReminders = () => {
-  const reminders = [];
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const generateUpcomingReminders = () => {
+    const reminders = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  medicines.forEach(medicine => {
-    if (!medicine.duration?.endDate) return;
+    medicines.forEach(medicine => {
+      // Skip paused medicines
+      if (!medicine.duration?.endDate || medicine.isPaused) return;
 
-    const endDate = new Date(medicine.duration.endDate);
-    endDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(medicine.duration.endDate);
+      endDate.setHours(23, 59, 59, 999); // Allow until end of day
 
-    // Only include medicines that are still active
-    if (endDate >= today && medicine.times) {
-      medicine.times.forEach(time => {
-        const [hours, minutes] = time.split(':').map(Number);
-        const reminderTime = new Date();
-        reminderTime.setHours(hours, minutes, 0, 0);
+      // Only include medicines that are still active
+      if (endDate >= today && medicine.times) {
+        medicine.times.forEach(time => {
+          const [hours, minutes] = time.split(':').map(Number);
+          const reminderTime = new Date();
+          reminderTime.setHours(hours, minutes, 0, 0);
 
-        // Only include reminders still in the future today
-        if (reminderTime >= currentTime && reminderTime.toDateString() === today.toDateString()) {
-          const timeDiff = reminderTime - currentTime;
-          const hoursUntil = Math.floor(timeDiff / (1000 * 60 * 60));
-          const minutesUntil = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+          // Only include reminders still in the future today
+          if (reminderTime >= currentTime && reminderTime.toDateString() === today.toDateString()) {
+            const timeDiff = reminderTime - currentTime;
+            const hoursUntil = Math.floor(timeDiff / (1000 * 60 * 60));
+            const minutesUntil = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
 
-          console.log("✅ Added:", medicine.name, time, "->", reminderTime.toLocaleTimeString());
+            reminders.push({
+              id: `${medicine._id}-${time}`,
+              originalMedicineId: medicine._id, // Needed for toggling mute
+              medicine: medicine.name,
+              dose: medicine.dose,
+              isMuted: medicine.isMuted, // Pass mute status
+              time,
+              reminderTime,
+              hoursUntil,
+              minutesUntil,
+              isToday: true,
+            });
+          }
+        });
+      }
+    });
 
-          reminders.push({
-            id: `${medicine._id}-${time}`,
-            medicine: medicine.name,
-            dose: medicine.dose,
-            time,
-            reminderTime,
-            hoursUntil,
-            minutesUntil,
-            isToday: true,
-          });
-        } else {
-          console.log("❌ Skipped:", medicine.name, time, "->", reminderTime.toLocaleTimeString());
-        }
-      });
-    }
-  });
-
-  // Sort & keep only the next 8
-  reminders.sort((a, b) => a.reminderTime - b.reminderTime);
-  setUpcomingReminders(reminders.slice(0, 8));
-};
-
-
+    // Sort & keep only the next 8
+    reminders.sort((a, b) => a.reminderTime - b.reminderTime);
+    setUpcomingReminders(reminders.slice(0, 8));
+  };
 
   const formatTimeUntil = (hours, minutes) => {
     if (hours === 0 && minutes <= 0) return 'Now!';
@@ -101,7 +98,7 @@ const generateUpcomingReminders = () => {
   if (loading) return <LoadingSpinner />;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-gray-900 mb-3">Medicine Reminders ⏰</h1>
         <p className="text-xl text-gray-600">Never miss a dose - stay on track with your medication schedule</p>
@@ -113,7 +110,7 @@ const generateUpcomingReminders = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Upcoming Reminders */}
+        {/* Upcoming Reminders List */}
         <div className="lg:col-span-2 bg-white rounded-xl shadow-lg border border-gray-200">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-2xl font-semibold text-gray-900 flex items-center">
@@ -122,6 +119,7 @@ const generateUpcomingReminders = () => {
             </h2>
             <p className="text-sm text-gray-600 mt-1">Your next medication schedule</p>
           </div>
+
           <div className="p-6">
             {upcomingReminders.length > 0 ? (
               <div className="space-y-4">
@@ -140,16 +138,33 @@ const generateUpcomingReminders = () => {
                         <p className="text-sm text-blue-600 font-bold">📅 at {reminder.time}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className={`inline-block px-4 py-2 rounded-full text-sm font-bold shadow-md ${getPriorityColor(reminder.hoursUntil, reminder.minutesUntil)}`}>
-                        {formatTimeUntil(reminder.hoursUntil, reminder.minutesUntil)}
-                      </span>
-                      <p className="text-xs text-gray-500 mt-2 font-medium">
-                        {getPriorityText(reminder.hoursUntil, reminder.minutesUntil)}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {reminder.isToday ? 'Today' : 'Tomorrow'}
-                      </p>
+
+                    <div className="flex items-center space-x-3">
+                      {/* Mute Button integrated into each reminder */}
+                      <button
+                        onClick={() => toggleMuteMedicine(reminder.originalMedicineId)}
+                        className={`flex flex-col items-center justify-center w-10 h-10 rounded-full transition-all duration-200 ${
+                          reminder.isMuted 
+                            ? 'bg-gray-200 text-gray-500' // Muted Style
+                            : 'bg-purple-100 text-purple-600' // Active Style
+                        }`}
+                        title={reminder.isMuted ? "Unmute Alarm" : "Mute Alarm"}
+                      >
+                        {reminder.isMuted ? (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+                        )}
+                      </button>
+
+                      <div className="text-right">
+                        <span className={`inline-block px-4 py-2 rounded-full text-sm font-bold shadow-md ${getPriorityColor(reminder.hoursUntil, reminder.minutesUntil)}`}>
+                          {formatTimeUntil(reminder.hoursUntil, reminder.minutesUntil)}
+                        </span>
+                        <p className="text-xs text-gray-500 mt-2 font-medium">
+                          {getPriorityText(reminder.hoursUntil, reminder.minutesUntil)}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -164,9 +179,8 @@ const generateUpcomingReminders = () => {
           </div>
         </div>
 
-        {/* Reminder Settings & Info */}
+        {/* Reminder Settings & Info (Right Column) */}
         <div className="space-y-6">
-          {/* Settings Card */}
           <div className="bg-white rounded-xl shadow-lg border border-gray-200">
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
@@ -175,69 +189,21 @@ const generateUpcomingReminders = () => {
               </h2>
             </div>
             <div className="p-6 space-y-4">
+              {/* Static Info Cards */}
               <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
                 <div>
-                  <h3 className="font-bold text-green-900">Browser Notifications</h3>
-                  <p className="text-sm text-green-700">Get notified even when app is closed</p>
+                  <h3 className="font-bold text-green-900">Notifications</h3>
+                  <p className="text-sm text-green-700">Enabled for high priority</p>
                 </div>
-                <div className="text-green-600">
-                  <span className="text-2xl">✅</span>
-                </div>
+                <span className="text-2xl">✅</span>
               </div>
-
-              <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div>
-                  <h3 className="font-bold text-blue-900">Sound Alerts</h3>
-                  <p className="text-sm text-blue-700">Audio notification for reminders</p>
-                </div>
-                <div className="text-blue-600">
-                  <span className="text-2xl">🔊</span>
-                </div>
-              </div>
-
+              
               <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg border border-purple-200">
                 <div>
-                  <h3 className="font-bold text-purple-900">Smart Reminders</h3>
-                  <p className="text-sm text-purple-700">AI-powered reminder optimization</p>
+                  <h3 className="font-bold text-purple-900">Offline Sync</h3>
+                  <p className="text-sm text-purple-700">Updates sync automatically</p>
                 </div>
-                <div className="text-purple-600">
-                  <span className="text-2xl">🧠</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Tips Card */}
-          <div className="bg-white rounded-xl shadow-lg border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="text-2xl mr-2">💡</span>
-                Tips
-              </h2>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                <div className="flex items-center">
-                  <span className="text-yellow-600 text-xl mr-3">⭐</span>
-                  <div>
-                    <h4 className="font-bold text-yellow-800">Best Practice</h4>
-                    <p className="text-sm text-yellow-700">
-                      Set consistent reminder times to build better medication habits
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-                <div className="flex items-center">
-                  <span className="text-indigo-600 text-xl mr-3">📱</span>
-                  <div>
-                    <h4 className="font-bold text-indigo-800">Phone Tip</h4>
-                    <p className="text-sm text-indigo-700">
-                      Keep your phone volume up to hear notification alerts
-                    </p>
-                  </div>
-                </div>
+                <span className="text-2xl">🔄</span>
               </div>
             </div>
           </div>

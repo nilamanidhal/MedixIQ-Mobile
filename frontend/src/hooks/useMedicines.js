@@ -80,6 +80,9 @@ export const useMedicines = () => {
         });
 
         for (const med of currentMeds) {
+            // 🔥 PAUSE CHECK: Do not generate logs if paused
+            if (med.isPaused) continue;
+
             const medId = med._id;
             const schedules = getScheduledTimesForMedicine(med, 2); 
 
@@ -109,7 +112,6 @@ export const useMedicines = () => {
     // --- 1. LOAD DATA ---
     const loadData = async (onlyCache = false) => {
         let cachedMeds = getCachedMedicines();
-        // Sort Newest First
         const sortedMeds = cachedMeds.sort((a, b) => {
             const dateA = new Date(a.createdAt || 0).getTime();
             const dateB = new Date(b.createdAt || 0).getTime();
@@ -131,7 +133,6 @@ export const useMedicines = () => {
         const status = await Network.getStatus();
         if (status.connected && token) {
             try {
-                // Fetch from Server
                 const resMeds = await axios.get(`${API_BASE_URL}/medicines`, { headers: { Authorization: `Bearer ${token}` } });
                 const serverMedicines = resMeds.data.medicines;
                 
@@ -141,27 +142,20 @@ export const useMedicines = () => {
                     serverLogs = resLogs.data.logs || [];
                 } catch(e) { /* ignore */ }
 
-                // --- MERGE MEDICINES ---
-           const localTempMeds = sortedMeds.filter(localM => {
-                    // Check if this is a temp item
+                // Merge Medicines (Deduplication)
+                const localTempMeds = sortedMeds.filter(localM => {
                     if (!localM._id.toString().startsWith('temp_')) return false;
-                    
-                    // Check if this temp item is already present in server data
                     const alreadySynced = serverMedicines.some(serverM => serverM.clientId === localM._id);
-                    
-                    // Only keep it if it is NOT on the server yet
                     return !alreadySynced;
                 });
-                
+
                 const mergedMeds = [...localTempMeds, ...serverMedicines]
-                    .filter((v,i,a)=>a.findIndex(v2=>(v2._id===v._id))===i)
                     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
                 
-                // --- 🔥 MERGE LOGS (FIXED) ---
+                // Merge Logs
                 const mergedLogsMap = new Map();
                 serverLogs.forEach(log => mergedLogsMap.set(log._id, log));
 
-                // Override with local logs that are PENDING SYNC
                 cachedLogs.forEach(localLog => {
                     if (localLog._id.toString().startsWith('log_')) {
                         mergedLogsMap.set(localLog._id, localLog);
@@ -197,7 +191,9 @@ export const useMedicines = () => {
                 pendingSync: true,
                 createdAt: new Date().toISOString(), 
                 times: medicineData.times || [],
-                duration: medicineData.duration || { startDate: new Date(), endDate: new Date() }
+                duration: medicineData.duration || { startDate: new Date(), endDate: new Date() },
+                isMuted: false, 
+                isPaused: false 
             };
 
             const currentCache = getCachedMedicines();
@@ -218,7 +214,7 @@ export const useMedicines = () => {
         }
     };
 
-    // --- 3. UPDATE MEDICINE ---
+    // --- 3. UPDATE MEDICINE (Generic) ---
     const updateMedicine = async (id, medicineData) => {
         const currentCache = getCachedMedicines();
         const newList = currentCache.map(m => m._id === id ? { ...m, ...medicineData } : m);
@@ -226,8 +222,11 @@ export const useMedicines = () => {
         setMedicines(newList);
         triggerGlobalUpdate();
 
-        await cancelMedicineReminders(id);
-        await scheduleMedicineReminder({ ...medicineData, _id: id });
+        // Reschedule alarms (unless paused)
+        const updatedMed = newList.find(m => m._id === id);
+        if(updatedMed && !updatedMed.isPaused) {
+            await scheduleMedicineReminder(updatedMed);
+        }
 
         if (id.toString().startsWith('temp_')) {
             let queue = getQueue();
@@ -267,8 +266,103 @@ export const useMedicines = () => {
         return { success: true };
     };
 
-    // --- 5. LOGGING ---
-    // --- 5. LOGGING ---
+    // --- 5A. TOGGLE MUTE (SILENT MODE) ---
+    const toggleMuteMedicine = async (id) => {
+        const currentCache = getCachedMedicines();
+        const med = currentCache.find(m => m._id === id);
+        if (!med) return;
+
+        const newMuteStatus = !med.isMuted;
+        
+        // Update Local
+        const updatedMeds = currentCache.map(m => m._id === id ? { ...m, isMuted: newMuteStatus } : m);
+        saveMedicinesToCache(updatedMeds);
+        setMedicines(updatedMeds);
+        triggerGlobalUpdate();
+
+        // Reschedule (switches notification channel)
+        const medToUpdate = updatedMeds.find(m => m._id === id);
+        if (medToUpdate && !medToUpdate.isPaused) {
+            await scheduleMedicineReminder(medToUpdate);
+        }
+
+        // Queue Update
+        if (id.toString().startsWith('temp_')) {
+            let queue = getQueue();
+            const idx = queue.findIndex(q => q.data._id === id && (q.action === 'ADD' || q.action === 'UPDATE'));
+            if (idx !== -1) {
+                queue[idx].data.isMuted = newMuteStatus;
+                saveQueue(queue);
+                return { success: true };
+            }
+        }
+
+        addToQueue('UPDATE', { id, medicineData: { isMuted: newMuteStatus } });
+        const status = await Network.getStatus();
+        if (status.connected) syncOfflineData();
+        return { success: true };
+    };
+
+    // --- 5B. TOGGLE PAUSE (TREATMENT SUSPENSION) ---
+    const togglePauseMedicine = async (id, extendDuration = false) => {
+        const currentCache = getCachedMedicines();
+        const med = currentCache.find(m => m._id === id);
+        if (!med) return;
+
+        const isPausing = !med.isPaused;
+        let updatePayload = { isPaused: isPausing };
+
+        if (isPausing) {
+            // ---> PAUSING (Works Offline)
+            updatePayload.pausedDate = new Date().toISOString();
+            await cancelMedicineReminders(id); // Stop alarms immediately
+        } else {
+            // ---> RESUMING
+            if (extendDuration && med.pausedDate) {
+                const pausedTime = new Date().getTime() - new Date(med.pausedDate).getTime();
+                const oldEndDate = new Date(med.duration.endDate).getTime();
+                const newEndDate = new Date(oldEndDate + pausedTime).toISOString();
+                
+                updatePayload.duration = { ...med.duration, endDate: newEndDate };
+                updatePayload.pausedDate = null; 
+            } else {
+                updatePayload.pausedDate = null;
+            }
+        }
+
+        // Apply Local Update
+        const updatedMeds = currentCache.map(m => 
+            m._id === id ? { ...m, ...updatePayload } : m
+        );
+        saveMedicinesToCache(updatedMeds);
+        setMedicines(updatedMeds);
+        triggerGlobalUpdate();
+
+        // If resuming, re-schedule alarms
+        if (!isPausing) {
+            const medToUpdate = updatedMeds.find(m => m._id === id);
+            await scheduleMedicineReminder(medToUpdate);
+        }
+
+        // Queue Sync
+        if (id.toString().startsWith('temp_')) {
+            let queue = getQueue();
+            const idx = queue.findIndex(q => q.data._id === id && q.action === 'ADD');
+            if (idx !== -1) {
+                queue[idx].data = { ...queue[idx].data, ...updatePayload };
+                saveQueue(queue);
+                return { success: true };
+            }
+        }
+
+        addToQueue('UPDATE', { id, medicineData: updatePayload });
+        const status = await Network.getStatus();
+        if (status.connected) syncOfflineData();
+        
+        return { success: true };
+    };
+
+    // --- 6. LOGGING (Manual & Notification) ---
     const addManualLog = async (medicineId, statusVal, medicineName) => {
         const now = new Date();
         const nowTimeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -276,20 +370,19 @@ export const useMedicines = () => {
         
         const currentLogs = getCachedLogs();
         
-        // 🔥 IMPROVED SEARCH: Handle both ID types
+        // Find Medicine
         let med = medicines.find(m => m._id === medicineId);
-        
-        // If not found by ID, try finding by Name (Last resort fallback)
         if (!med && medicineName) {
             med = medicines.find(m => m.name === medicineName);
         }
         
-        // If still not found, we can't link it correctly, but we should persist the name we have
+        // Cannot log for paused medicine
+        if (med && med.isPaused) return { success: false, message: "Medicine is paused." };
+
         const finalName = med?.name || medicineName || 'Unknown Medicine';
         const finalMedId = med?._id || medicineId;
         const finalClientId = med?.clientId || med?._id || medicineId;
 
-        // 1. Try to find existing PENDING log
         const targetLogIndex = currentLogs.findIndex(log => 
             (log.medicineId?._id === finalMedId || log.medicineId === finalMedId) && 
             log.status === 'pending' &&
@@ -301,7 +394,6 @@ export const useMedicines = () => {
         if (targetLogIndex !== -1) {
             logToUpdate = currentLogs[targetLogIndex];
         } else {
-             // 2. Create new log if needed
              logToUpdate = {
                  _id: `log_manual_${Date.now()}`,
                  clientLogId: `log_manual_${Date.now()}`,
@@ -315,7 +407,6 @@ export const useMedicines = () => {
              if(targetLogIndex === -1) currentLogs.unshift(logToUpdate);
         }
 
-        // 3. Update Status
         const updatedLogs = currentLogs.map(log => 
             log._id === logToUpdate._id ? 
             { ...log, status: statusVal, pendingSync: true } : log
@@ -325,7 +416,6 @@ export const useMedicines = () => {
         setLogs(updatedLogs);
         triggerGlobalUpdate();
         
-        // 4. Sync Queue Logic
         if (logToUpdate._id.toString().startsWith('log_')) { 
              addToQueue('CREATE_LOG', {
                  clientLogId: logToUpdate.clientLogId || logToUpdate._id,
@@ -337,6 +427,64 @@ export const useMedicines = () => {
              });
         } else { 
              addToQueue('UPDATE_LOG', { logId: logToUpdate._id, status: statusVal });
+        }
+
+        const status = await Network.getStatus();
+        if (status.connected) syncOfflineData();
+
+        return { success: true };
+    };
+
+    // --- 7. NOTIFICATION ACTION HANDLER ---
+    const handleNotificationAction = async (medicineId, actionId, medicineName) => {
+        let statusVal;
+        switch (actionId) {
+            case 'taken_action': statusVal = 'taken'; break;
+            case 'skip_action': statusVal = 'skipped'; break;
+            default: return;
+        }
+        await addManualLog(medicineId, statusVal, medicineName);
+    };
+
+    // --- 8. UPDATE LOG STATUS (For History UI) ---
+    const updateLogStatus = async (logId, statusVal) => {
+        const currentLogs = getCachedLogs();
+        const logToUpdate = currentLogs.find(log => log._id === logId);
+
+        if (!logToUpdate) {
+            loadData(false);
+            return { success: false, message: "Log not found." };
+        }
+        
+        const updatedLogs = currentLogs.map(log => 
+            log._id === logId ? { ...log, status: statusVal, pendingSync: true } : log
+        );
+
+        saveLogsToCache(updatedLogs);
+        setLogs(updatedLogs);
+        triggerGlobalUpdate();
+        
+        if (logToUpdate._id.toString().startsWith('log_')) { 
+            let queue = getQueue();
+            const existingCreateLogIndex = queue.findIndex(q => 
+                q.action === 'CREATE_LOG' && (q.data.clientLogId === logId || q.data.tempLogId === logId)
+            );
+
+            if (existingCreateLogIndex !== -1) {
+                queue[existingCreateLogIndex].data.status = statusVal;
+                saveQueue(queue);
+            } else {
+                addToQueue('CREATE_LOG', {
+                     clientLogId: logToUpdate.clientLogId || logToUpdate._id,
+                     medicineClientId: logToUpdate.medicineClientId || logToUpdate.medicineId._id,
+                     status: statusVal,
+                     date: logToUpdate.date,
+                     time: logToUpdate.time,
+                     tempLogId: logToUpdate._id 
+                });
+            }
+        } else { 
+            addToQueue('UPDATE_LOG', { logId: logToUpdate._id, status: statusVal });
         }
 
         const status = await Network.getStatus();
@@ -369,7 +517,7 @@ export const useMedicines = () => {
         loadData(false);
     };
 
-    // --- 6. SYNC FUNCTION (With Smart 404 Handling) ---
+    // --- 9. SYNC FUNCTION ---
     const syncOfflineData = async () => {
         if (isSyncingGlobal) return;
         let queue = getQueue();
@@ -384,50 +532,40 @@ export const useMedicines = () => {
                 let success = false;
 
                 try {
-                    // --- ADD MEDICINE ---
                     if (item.action === 'ADD') {
                         const payload = { ...item.data, clientId: item.data._id };
                         const res = await axios.post(`${API_BASE_URL}/medicines`, payload, { headers: { Authorization: `Bearer ${token}` } });
                         if (res.status === 200 || res.status === 201) {
                             success = true;
-                            const realMedicine = res.data.medicine;
-                            await swapIdInCache(item.data._id, realMedicine);
+                            await swapIdInCache(item.data._id, res.data.medicine);
                         }
                     } 
-                    // --- CREATE LOG ---
                     else if (item.action === 'CREATE_LOG') {
-                        console.log("🚀 Syncing Log to Server:", item.data); // <--- DEBUG LOG
                         const res = await axios.post(`${API_BASE_URL}/medicines/logs`, item.data, { headers: { Authorization: `Bearer ${token}` } });
                         if (res.status === 200 || res.status === 201) {
                             success = true;
                             const realLog = res.data.log;
-                            console.log("✅ Log Synced Successfully:", realLog); // <--- DEBUG LOG
                             const currentLogs = getCachedLogs();
                             const syncedLogs = currentLogs.map(l => l._id === item.data.tempLogId ? { ...l, _id: realLog._id, pendingSync: false } : l);
                             saveLogsToCache(syncedLogs);
                             setLogs(syncedLogs);
                         }
                     }
-                    // --- UPDATE LOG (Smart Fallback) ---
                     else if (item.action === 'UPDATE_LOG') {
                          try {
                              await axios.put(`${API_BASE_URL}/medicines/logs/${item.data.logId}`, { status: item.data.status }, { headers: { Authorization: `Bearer ${token}` } });
                              success = true;
                          } catch (updateError) {
-                             // 🚨 FALLBACK: If 404, Create it instead
                              if (updateError.response?.status === 404) {
-                                 console.log("Log not found (404), switching to CREATE logic...");
                                  const currentLogs = getCachedLogs();
                                  const localLog = currentLogs.find(l => l._id === item.data.logId);
-                                 
                                  if (localLog) {
                                      const createPayload = {
-                                        // **FIXED:** Use the clientLogId for idempotency
-                    clientLogId: localLog.clientLogId || localLog._id, 
-                    medicineClientId: localLog.medicineClientId || localLog.medicineId._id || localLog.medicineId,
-                    status: item.data.status,
-                    date: localLog.date,
-                    time: localLog.time
+                                         clientLogId: localLog.clientLogId || localLog._id, 
+                                         medicineClientId: localLog.medicineClientId || localLog.medicineId._id || localLog.medicineId,
+                                         status: item.data.status,
+                                         date: localLog.date,
+                                         time: localLog.time
                                      };
                                      const createRes = await axios.post(`${API_BASE_URL}/medicines/logs`, createPayload, { headers: { Authorization: `Bearer ${token}` } });
                                      if (createRes.status === 200 || createRes.status === 201) {
@@ -438,14 +576,13 @@ export const useMedicines = () => {
                                          setLogs(syncedLogs);
                                      }
                                  } else {
-                                     success = true; // Local log gone, clear queue
+                                     success = true; 
                                  }
                              } else {
                                  throw updateError; 
                              }
                          }
                          
-                         // Clear local pending flag on success
                          if (success) {
                              const currentLogs = getCachedLogs();
                              const updatedLogs = currentLogs.map(l => l._id === item.data.logId ? {...l, pendingSync: false} : l);
@@ -453,14 +590,12 @@ export const useMedicines = () => {
                              setLogs(updatedLogs);
                          }
                     }
-                    // --- UPDATE MEDICINE ---
                     else if (item.action === 'UPDATE') { 
                         if (!item.data.id.toString().startsWith('temp_')) {
                             await axios.put(`${API_BASE_URL}/medicines/${item.data.id}`, item.data.medicineData, { headers: { Authorization: `Bearer ${token}` } });
                         }
                         success = true; 
                     }
-                    // --- DELETE MEDICINE ---
                     else if (item.action === 'DELETE') { 
                          if (!item.data.id.toString().startsWith('temp_')) {
                              await axios.delete(`${API_BASE_URL}/medicines/${item.data.id}`, { headers: { Authorization: `Bearer ${token}` } });
@@ -469,8 +604,6 @@ export const useMedicines = () => {
                     }
 
                 } catch (e) { 
-                    console.error("Sync error:", e);
-                    // Clear 404s for Update/Delete to prevent queue blocking
                     if (e.response?.status === 404 && item.action !== 'CREATE_LOG' && item.action !== 'UPDATE_LOG') {
                         success = true; 
                     }
@@ -490,101 +623,14 @@ export const useMedicines = () => {
         }
     };
 
-    // --- 5B. UPDATE EXISTING LOG (Called directly by HistorySection UI) ---
-const updateLogStatus = async (logId, statusVal) => {
-    const currentLogs = getCachedLogs();
-    
-    // 1. Find the log by its ID
-    const logToUpdate = currentLogs.find(log => log._id === logId);
-
-    if (!logToUpdate) {
-        console.warn(`Attempted to update log ${logId} but it was not found in cache.`);
-        // Try a global refresh to get latest state
-        loadData(false);
-        return { success: false, message: "Log not found." };
-    }
-    
-    // 2. Update status and mark for sync
-    const updatedLogs = currentLogs.map(log => 
-        log._id === logId ? 
-        { ...log, status: statusVal, pendingSync: true } : log
-    );
-
-    saveLogsToCache(updatedLogs);
-    setLogs(updatedLogs);
-    triggerGlobalUpdate();
-    
-    // 3. Sync Queue Logic
-    if (logToUpdate._id.toString().startsWith('log_')) { 
-        // Log was generated locally (temporary client-side ID)
-        // Check if there is already a CREATE_LOG queue item for this temp log. If so, update it.
-        let queue = getQueue();
-        const existingCreateLogIndex = queue.findIndex(q => 
-            q.action === 'CREATE_LOG' && (q.data.clientLogId === logId || q.data.tempLogId === logId)
-        );
-
-        if (existingCreateLogIndex !== -1) {
-            queue[existingCreateLogIndex].data.status = statusVal;
-            saveQueue(queue);
-        } else {
-            // This should not happen if logs are generated correctly, but as a fallback:
-            // Since it's a temporary ID, it must be created on the server
-            addToQueue('CREATE_LOG', {
-                 clientLogId: logToUpdate.clientLogId || logToUpdate._id,
-                 medicineClientId: logToUpdate.medicineClientId || logToUpdate.medicineId._id,
-                 status: statusVal,
-                 date: logToUpdate.date,
-                 time: logToUpdate.time,
-                 tempLogId: logToUpdate._id 
-            });
-        }
-    } else { 
-        // Log came from server (real MongoDB ID)
-        addToQueue('UPDATE_LOG', { logId: logToUpdate._id, status: statusVal });
-    }
-
-    const status = await Network.getStatus();
-    if (status.connected) syncOfflineData();
-
-    return { success: true };
-};
-
-
-// --- 5C. Notification Action Handler ---
-    const handleNotificationAction = async (medicineId, actionId, medicineName) => {
-        let statusVal;
-        
-        // Map the actionId from the notification (e.g., 'taken', 'skipped')
-        // to the log status value used in your logs state/API ('taken', 'skipped')
-        switch (actionId) {
-            case 'taken_action':
-                statusVal = 'taken';
-                break;
-            case 'skip_action':
-                statusVal = 'skipped';
-                break;
-            default:
-                console.warn(`Unknown notification action: ${actionId}`);
-                return;
-        }
-
-        // Call the manual log function, which is designed to either
-        // update an existing PENDING log or create a new one.
-        const result = await addManualLog(medicineId, statusVal, medicineName);
-        
-        if (result.success) {
-            console.log(`Notification action (${statusVal}) logged successfully for ${medicineName}.`);
-        }
-    };
-
     const fetchLogs = async () => getCachedLogs();
     const fetchFullHistory = async () => {}; 
 
     return { 
         medicines, logs, loading, 
         fetchMedicines: loadData, fetchFullHistory,
-        addMedicine, updateMedicine, deleteMedicine, 
-        handleNotificationAction, addManualLog, updateLogStatus, syncOfflineData, fetchLogs
+        addMedicine, updateMedicine, deleteMedicine, toggleMuteMedicine, togglePauseMedicine,
+        handleNotificationAction, addManualLog, updateLogStatus, syncOfflineData, fetchLogs 
     };
 };
 
