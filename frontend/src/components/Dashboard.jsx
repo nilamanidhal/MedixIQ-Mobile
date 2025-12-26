@@ -5,6 +5,7 @@ import { useMedicines } from '../hooks/useMedicines';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { NativeSettings, AndroidSettings, IOSSettings } from 'capacitor-native-settings';
 import { Network } from '@capacitor/network';
+import { Check, AlertCircle, Clock, Circle } from "lucide-react";
 
 // Helper to open settings
 const openAppDetails = async () => {
@@ -34,13 +35,14 @@ const Dashboard = () => {
     const { user } = useAuth();
     
     // Get data and actions from hook
-    const { medicines, logs, syncOfflineData, lastSyncTime, addManualLog } = useMedicines();
+    const { medicines, logs, syncOfflineData, lastSyncTime } = useMedicines();
     
     const { permission } = useNotifications();
     const [nextDose, setNextDose] = useState(null);
     const [todayStats, setTodayStats] = useState({ taken: 0, total: 0, percentage: 0 });
     const [todaysDoses, setTodaysDoses] = useState([]); 
     const [isOnline, setIsOnline] = useState(true);
+    const [now, setNow] = useState(new Date()); // State for live time updates
 
     // --- 1. INITIAL SETUP ---
     useEffect(() => {
@@ -55,7 +57,12 @@ const Dashboard = () => {
         // Initial Sync (Try-catch handled inside hook)
         syncOfflineData();
 
-        return () => { listener.remove && listener.remove(); };
+        // Update "now" every minute to refresh Red/Grey status
+        const timer = setInterval(() => setNow(new Date()), 60000);
+
+        return () => { listener.remove && listener.remove(); 
+            clearInterval(timer);
+         };
     }, []);
 
     // Recalculate whenever data changes (Instantly updates UI even offline)
@@ -63,7 +70,7 @@ const Dashboard = () => {
         if (medicines.length > 0 || logs.length >= 0) {
             calculateDashboardStats();
         }
-    }, [medicines, logs]);
+    }, [medicines, logs, now]);
 
     const checkNetwork = async () => {
         const status = await Network.getStatus();
@@ -78,18 +85,18 @@ const Dashboard = () => {
     };
 
     // --- 2. ACTION HANDLER (Tap to Take) ---
-    const handleQuickAction = async (dose) => {
-        if (dose.status === 'taken') return; 
+    // const handleQuickAction = async (dose) => {
+    //     if (dose.status === 'taken') return; 
         
-        // Optimistic Update
-        const updatedDoses = todaysDoses.map(d => 
-            d.id === dose.id ? { ...d, status: 'taken' } : d
-        );
-        setTodaysDoses(updatedDoses);
+    //     // Optimistic Update
+    //     const updatedDoses = todaysDoses.map(d => 
+    //         d.id === dose.id ? { ...d, status: 'taken' } : d
+    //     );
+    //     setTodaysDoses(updatedDoses);
 
-        // Save Log (Hook handles offline queue)
-        await addManualLog(dose.medicineId, 'taken', dose.name);
-    };
+    //     // Save Log (Hook handles offline queue)
+    //     await addManualLog(dose.medicineId, 'taken', dose.name);
+    // };
 
     // --- 3. CORE LOGIC (Stats & Schedule) ---
     const calculateDashboardStats = () => {
@@ -235,7 +242,7 @@ const Dashboard = () => {
                 {/* UP NEXT */}
                 <div className="bg-gradient-to-br from-indigo-600 to-blue-600 rounded-3xl p-6 text-white shadow-lg shadow-blue-200/50 flex justify-between items-center relative overflow-hidden">
                     <div className="z-10">
-                        <p className="text-blue-100 text-[10px] font-bold uppercase tracking-widest mb-1">Status</p>
+                        <p className="text-blue-100 text-[10px] font-bold uppercase tracking-widest mb-1">UP NEXT</p>
                         {nextDose ? (
                             <>
                                 <p className="text-2xl font-bold tracking-tight">{nextDose.name}</p>
@@ -259,7 +266,7 @@ const Dashboard = () => {
                     </div>
                 </div>
 
-                {/* SCHEDULE */}
+               {/* SCHEDULE (READ ONLY) */}
                 <div>
                     <div className="flex justify-between items-end mb-4 px-1">
                         <h3 className="font-bold text-slate-800 text-lg">Today's Schedule</h3>
@@ -272,34 +279,62 @@ const Dashboard = () => {
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            {todaysDoses.map((dose) => (
-                                <div key={dose.id} className={`flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 ${
-                                    dose.status === 'taken' 
-                                        ? 'bg-emerald-50/50 border-emerald-100 opacity-60' 
-                                        : 'bg-white border-slate-100 shadow-[0_2px_8px_rgb(0,0,0,0.02)]'
-                                }`}>
-                                    <div className="flex items-center space-x-4">
-                                        <div className={`text-xs font-bold px-3 py-2 rounded-xl min-w-[60px] text-center ${
-                                            dose.status === 'taken' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
-                                        }`}>
-                                            {dose.time}
+                            {todaysDoses.map((dose) => {
+                                const isTaken = dose.status === 'taken';
+                                // It is Late if not taken AND the time has passed
+                                const isLate = !isTaken && dose.dateObj < now;
+                                
+                                return (
+                                    <div key={dose.id} className={`flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 ${
+                                        isTaken 
+                                            ? 'bg-emerald-50/50 border-emerald-100 opacity-60' 
+                                            : isLate 
+                                                ? 'bg-red-50/50 border-red-100'
+                                                : 'bg-white border-slate-100 shadow-[0_2px_8px_rgb(0,0,0,0.02)]'
+                                    }`}>
+                                        
+                                        {/* Left Side: Time & Name */}
+                                        <div className="flex items-center space-x-4">
+                                            <div className={`text-xs font-bold px-3 py-2 rounded-xl min-w-[60px] text-center ${
+                                                isTaken ? 'bg-emerald-100 text-emerald-700' : 
+                                                isLate ? 'bg-red-100 text-red-700' :
+                                                'bg-slate-100 text-slate-600'
+                                            }`}>
+                                                {dose.time}
+                                            </div>
+                                            <div>
+                                                <h4 className={`font-bold text-base ${
+                                                    isTaken ? 'text-emerald-800 line-through decoration-emerald-800/30' : 
+                                                    isLate ? 'text-red-800' :
+                                                    'text-slate-700'
+                                                }`}>
+                                                    {dose.name}
+                                                </h4>
+                                                <p className={`text-xs font-medium ${isLate ? 'text-red-400' : 'text-slate-400'}`}>
+                                                    {dose.dose}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h4 className={`font-bold text-base ${dose.status === 'taken' ? 'text-emerald-800 line-through decoration-emerald-800/30' : 'text-slate-700'}`}>
-                                                {dose.name}
-                                            </h4>
-                                            <p className="text-xs text-slate-400 font-medium">{dose.dose}</p>
+
+                                        {/* Right Side: Status Indicator (Non-clickable) */}
+                                        <div className="pr-1">
+                                            {isTaken ? (
+                                                <div className="w-8 h-8 flex items-center justify-center bg-emerald-100 rounded-full text-emerald-600 shadow-sm">
+                                                    <Check size={18} strokeWidth={3} />
+                                                </div>
+                                            ) : isLate ? (
+                                                <div className="w-8 h-8 flex items-center justify-center bg-red-100 rounded-full text-red-500 shadow-sm">
+                                                    <AlertCircle size={18} strokeWidth={2.5} />
+                                                </div>
+                                            ) : (
+                                                <div className="w-8 h-8 flex items-center justify-center bg-slate-50 rounded-full text-slate-300 border border-slate-200">
+                                                    <Circle size={18} strokeWidth={2.5} />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
-                                    {dose.status === 'taken' ? (
-                                        <div className="w-10 h-10 flex items-center justify-center bg-emerald-100 rounded-full text-emerald-600 text-lg font-bold shadow-sm">✓</div>
-                                    ) : (
-                                        <button onClick={() => handleQuickAction(dose)} className="w-10 h-10 rounded-full border-2 border-slate-200 flex items-center justify-center text-slate-300 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all active:scale-95">
-                                            <span className="text-2xl pb-1">○</span>
-                                        </button>
-                                    )}
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>
