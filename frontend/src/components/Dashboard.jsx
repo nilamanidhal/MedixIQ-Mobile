@@ -6,6 +6,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { NativeSettings, AndroidSettings, IOSSettings } from 'capacitor-native-settings';
 import { Network } from '@capacitor/network';
 import { Check, AlertCircle, Clock, Circle } from "lucide-react";
+import PendingReviewModal from './PendingReviewModal';
 
 // Helper to open settings
 const openAppDetails = async () => {
@@ -35,7 +36,7 @@ const Dashboard = () => {
     const { user } = useAuth();
     
     // Get data and actions from hook
-    const { medicines, logs, syncOfflineData, lastSyncTime } = useMedicines();
+    const { medicines, logs, syncOfflineData, lastSyncTime, updateLogStatus } = useMedicines();
     
     const { permission } = useNotifications();
     const [nextDose, setNextDose] = useState(null);
@@ -43,6 +44,10 @@ const Dashboard = () => {
     const [todaysDoses, setTodaysDoses] = useState([]); 
     const [isOnline, setIsOnline] = useState(true);
     const [now, setNow] = useState(new Date()); // State for live time updates
+
+// Modal State
+    const [showReviewModal, setShowReviewModal] = useState(false);
+    const [overdueLogs, setOverdueLogs] = useState([]);
 
     // --- 1. INITIAL SETUP ---
     useEffect(() => {
@@ -113,6 +118,7 @@ const Dashboard = () => {
         let totalScheduledCount = 0;
         let takenCount = 0;
         let dailySchedule = [];
+        let pendingOverdue = [];
 
         medicines.forEach(med => {
             if (!med.isActive || med.isPaused) return;
@@ -156,6 +162,17 @@ const Dashboard = () => {
                     dateObj: doseTime,
                     status: status
                 });
+
+                // Check for Overdue (Popup Logic)
+                // 1. Must exist (generated)
+                // 2. Must be pending
+                // 3. Time must be in the past
+                if (existingLog && status === 'pending' && doseTime < now) {
+                    // Add extra check to prevent popup for just-scheduled items (optional 1 min buffer)
+                    if ((now - doseTime) > 60000) { 
+                        pendingOverdue.push(existingLog);
+                    }
+                }
             });
         });
 
@@ -167,6 +184,21 @@ const Dashboard = () => {
 
         const upcoming = dailySchedule.find(d => d.dateObj > now && d.status === 'pending');
         setNextDose(upcoming || null);
+
+        // Update Modal Data
+        setOverdueLogs(pendingOverdue);
+        if (pendingOverdue.length > 0) {
+            setShowReviewModal(true);
+        }
+    };
+
+    // --- 3. HANDLE MODAL ACTIONS ---
+    const handleReviewAction = async (logId, status) => {
+        // This updates the EXISTING log. It does NOT create a duplicate.
+        // It preserves the original scheduled time.
+        await updateLogStatus(logId, status);
+        
+        // UI updates automatically via useEffect
     };
 
     // SVG Math
@@ -341,6 +373,14 @@ const Dashboard = () => {
                 
                 <div className="h-8"></div>
             </div>
+            {/* 🔥 POPUP: Only shows if there are overdue logs */}
+            {showReviewModal && overdueLogs.length > 0 && (
+                <PendingReviewModal 
+                    logs={overdueLogs}
+                    onAction={handleReviewAction}
+                    onClose={() => setShowReviewModal(false)}
+                />
+            )}
         </div>
     );
 };
