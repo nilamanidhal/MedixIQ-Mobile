@@ -9,7 +9,8 @@ const trackingRoutes = require('./routes/tracking');
 const aiRoutes = require('./routes/aiRoutes');
 const { startCronJobs } = require('./services/cronService');
 const adminRoutes = require('./routes/admin');
-const contactRoutes=require('./routes/contact')
+const contactRoutes=require('./routes/contact');
+const reportRoutes=require('./routes/reports')
 
 dotenv.config();
 console.log("ENV LOADED:", process.env.VAPID_SUBJECT);
@@ -40,6 +41,7 @@ app.use('/api/tracking', trackingRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/contact',contactRoutes);
+app.use('/api/report', reportRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
