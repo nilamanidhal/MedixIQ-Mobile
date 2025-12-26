@@ -15,6 +15,7 @@ import HistorySection from './components/pages/HistorySection';
 import HealthTracking from './components/pages/HealthTraking';
 import ContactPage from './components/pages/ContactPage';
 import MorePage from './components/pages/MorePage';
+import MedicalRecords from './components/pages/MedicalRecords';
 
 
 // --- 🔒 Protected Route (For App Pages) ---
@@ -71,6 +72,7 @@ function App() {
             <Route path="/history" element={<HistorySection />} />
             <Route path="/health-tracking" element={<HealthTracking />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/medical-records" element={<MedicalRecords />} />
             <Route path="/more" element={<MorePage />} />
           </Route>
 

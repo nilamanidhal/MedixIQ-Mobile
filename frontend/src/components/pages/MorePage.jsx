@@ -11,7 +11,7 @@ const MorePage = () => {
       label: 'Prescriptions', 
       icon: '📄', 
       desc: 'Upload and manage scripts',
-      action: () => alert("Prescription Feature Coming Soon!") 
+      path: '/medical-records'
     },
     { 
       label: 'History Logs', 
