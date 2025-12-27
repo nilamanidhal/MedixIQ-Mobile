@@ -189,8 +189,45 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     if (!medicine) return res.status(404).json({ message: 'Medicine not found' });
     medicine.isActive = false;
     await medicine.save();
-    res.json({ message: 'Medicine deleted' });
-  } catch (err) { res.status(500).json({ message: 'Error deleting medicine' }); }
+   // 🛑 4. CLEANUP: Delete ONLY "Future" Logs
+    // We keep logs that have already passed (even if pending), so user sees them in history.
+    const Log = require('../models/Log');
+    const now = new Date();
+
+    // Find all 'pending' logs for this medicine
+    // (We don't touch 'taken' or 'missed' logs because they are history)
+    const pendingLogs = await Log.find({
+        medicineId: medicine._id,
+        status: 'pending' 
+    });
+
+    // Filter: Find logs where Time > Now
+    const logsToDelete = pendingLogs.filter(log => {
+        // Construct the full Date object for the log
+        // log.date is usually stored as midnight (00:00:00)
+        const logDateTime = new Date(log.date);
+        const [hours, minutes] = log.time.split(':').map(Number);
+        
+        // Set the specific time
+        logDateTime.setHours(hours, minutes, 0, 0);
+
+        // Return TRUE if the log is in the future
+        return logDateTime > now;
+    });
+
+    // Delete only the future logs found above
+    if (logsToDelete.length > 0) {
+        const ids = logsToDelete.map(l => l._id);
+        await Log.deleteMany({ _id: { $in: ids } });
+        console.log(`Deleted ${ids.length} future logs for medicine ${medicine.name}`);
+    }
+
+    res.json({ message: 'Medicine deleted and upcoming logs removed' });
+
+  } catch (err) {
+    console.error("Delete Error:", err); 
+    res.status(500).json({ message: 'Error deleting medicine' }); 
+  }
 });
 
 module.exports = router;
