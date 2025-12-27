@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../hooks/useNotifications';
 import { useMedicines } from '../hooks/useMedicines';
@@ -48,6 +48,14 @@ const Dashboard = () => {
 // Modal State
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [overdueLogs, setOverdueLogs] = useState([]);
+
+// 🛑 NEW: Prevents modal from re-opening if user manually closed it this session
+    const hasClosedModalRef = useRef(false);
+
+    const handleCloseModal = () => {
+        hasClosedModalRef.current = true; // Don't show again until refresh
+        setShowReviewModal(false);
+    };
 
     // --- 1. INITIAL SETUP ---
     useEffect(() => {
@@ -169,9 +177,7 @@ const Dashboard = () => {
                 // 3. Time must be in the past
                 if (existingLog && status === 'pending' && doseTime < now) {
                     // Add extra check to prevent popup for just-scheduled items (optional 1 min buffer)
-                    if ((now - doseTime) > 60000) { 
                         pendingOverdue.push(existingLog);
-                    }
                 }
             });
         });
@@ -373,12 +379,12 @@ const Dashboard = () => {
                 
                 <div className="h-8"></div>
             </div>
-            {/* 🔥 POPUP: Only shows if there are overdue logs */}
+           {/* 🔥 POPUP: Only shows if there are overdue logs */}
             {showReviewModal && overdueLogs.length > 0 && (
                 <PendingReviewModal 
                     logs={overdueLogs}
                     onAction={handleReviewAction}
-                    onClose={() => setShowReviewModal(false)}
+                    onClose={handleCloseModal} 
                 />
             )}
         </div>
