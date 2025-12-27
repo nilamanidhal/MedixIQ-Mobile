@@ -191,7 +191,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     await medicine.save();
    // 🛑 4. CLEANUP: Delete ONLY "Future" Logs
     // We keep logs that have already passed (even if pending), so user sees them in history.
-    const Log = require('../models/Log');
+    const Log = require('../models/MedicineLog');
     const now = new Date();
 
     // Find all 'pending' logs for this medicine
