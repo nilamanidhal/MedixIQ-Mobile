@@ -20,7 +20,7 @@ const MobileLayout = () => {
       </div>
 
       {/* 3. Global Overlays & Navigation */}
-      <AiChatbot />
+      {/* <AiChatbot /> */}
       <BottomNav />
       
     </div>

@@ -7,6 +7,8 @@ import { NativeSettings, AndroidSettings, IOSSettings } from 'capacitor-native-s
 import { Network } from '@capacitor/network';
 import { Check, AlertCircle, Clock, Circle } from "lucide-react";
 import PendingReviewModal from './PendingReviewModal';
+import AiChatbot from './AiChatbot';
+
 
 // Helper to open settings
 const openAppDetails = async () => {
@@ -387,6 +389,7 @@ const Dashboard = () => {
                     onClose={handleCloseModal} 
                 />
             )}
+            <AiChatbot/>
         </div>
     );
 };
