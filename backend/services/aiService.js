@@ -46,7 +46,7 @@ function bufferToGenerativePart(buffer, mimeType) {
 export async function askGemini(textPrompt, imageFile, history = [], contextData = {}) {
   try {
     // Use Flash model for speed and large context window
-    const modelName = "gemini-2.0-flash-lite-preview-02-05"; // Or "gemini-2.0-flash" / "gemini-1.5-flash"
+    const modelName = "gemini-2.5-flash"; // Or "gemini-2.0-flash" / "gemini-1.5-flash"
 
     console.log("🧠 Gemini Service Started ===");
     console.log("User prompt:", textPrompt);
