@@ -78,6 +78,10 @@ const AiChatbot = () => {
 
     const formData = new FormData();
     formData.append("prompt", input);
+
+    // ✅ 2. ADD THIS LINE (Time Awareness)
+    formData.append("userLocalTime", new Date().toLocaleTimeString());
+
     if (image) formData.append("image", image);
 
     setInput("");
@@ -85,10 +89,21 @@ const AiChatbot = () => {
     const fileInput = document.getElementById("file-input");
     if (fileInput) fileInput.value = "";
 
+
+const token = localStorage.getItem('token'); 
+
+    if (!token) {
+        alert("You must be logged in to use the AI.");
+        return;
+    }
+
     try {
       const API_BASE_URL = import.meta.env.VITE_API_URL;
       const response = await fetch(`${API_BASE_URL}/ai/query`, {
         method: "POST",
+        headers: {
+            'Authorization': `Bearer ${token}` 
+        },
         body: formData,
       });
       if (!response.ok) throw new Error("Network error");
