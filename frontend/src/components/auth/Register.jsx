@@ -37,6 +37,14 @@ const Register = ({ onSwitchToLogin }) => {
     e.preventDefault();
     setError('');
 
+    // 1. STRICT EMAIL REGEX
+    // This requires at least 2 characters after the dot (e.g., .com, .in, .co)
+    const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(formData.email)) {
+        alert("Please enter a valid email address (e.g., user@gmail.com)");
+        return; // 🛑 Stop here, don't send to backend
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -44,6 +52,15 @@ const Register = ({ onSwitchToLogin }) => {
 
     if (formData.password.length < 6) {
       setError('Password must be at least 6 characters long');
+      return;
+    }
+
+    const hasUpperCase = /[A-Z]/.test(formData.password);
+    const hasNumber = /[0-9]/.test(formData.password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(formData.password);
+
+    if (!hasUpperCase || !hasNumber || !hasSpecialChar) {
+      setError('Password must contain at least one uppercase letter, one number, and one special character');
       return;
     }
 

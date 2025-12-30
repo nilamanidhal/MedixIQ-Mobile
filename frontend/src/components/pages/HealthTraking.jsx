@@ -2,37 +2,22 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import LoadingSpinner from '../LoadingSpinner';
 import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts';
-
-// ✅ IMPORTING FROM OFFICIAL LUCIDE-REACT
 import { 
-  Activity, 
-  Pill, 
-  CheckCircle, 
-  TrendingUp, 
-  BarChart3, 
-  Award, 
-  Lightbulb, 
-  Target 
+  Activity, Pill, CheckCircle, TrendingUp, BarChart3, Award 
 } from "lucide-react";
 
 const HealthTracking = () => {
   const [trackingData, setTrackingData] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // ✅ Fetch tracking stats from backend
   useEffect(() => {
     const fetchStats = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await axios.get('https://medmind-mobile.onrender.com/api/tracking/stats', {
+        const API_URL = import.meta.env.VITE_API_URL || 'https://medmind-mobile.onrender.com/api';
+        const res = await axios.get(`${API_URL}/tracking/stats`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setTrackingData(res.data);
@@ -42,20 +27,55 @@ const HealthTracking = () => {
         setLoading(false);
       }
     };
-
     fetchStats();
   }, []);
 
   const getAdherenceColor = (rate) => {
-    if (rate >= 90) return 'text-emerald-600 bg-emerald-100 border-emerald-200';
-    if (rate >= 75) return 'text-amber-600 bg-amber-100 border-amber-200';
-    return 'text-red-600 bg-red-100 border-red-200';
+    if (rate >= 90) return 'text-emerald-600 bg-emerald-50';
+    if (rate >= 75) return 'text-amber-600 bg-amber-50';
+    return 'text-red-600 bg-red-50';
   };
 
-  const getProgressBarColor = (rate) => {
-    if (rate >= 90) return 'bg-emerald-500';
-    if (rate >= 75) return 'bg-amber-500';
-    return 'bg-red-500';
+  const getStrokeColor = (rate) => {
+    if (rate >= 90) return '#10b981'; 
+    if (rate >= 75) return '#f59e0b'; 
+    return '#ef4444'; 
+  };
+
+  // ✅ NEW: Box Style Circular Progress
+  const CircleProgressBox = ({ percentage, color, label, subLabel }) => {
+    const radius = 24; // Bigger circle
+    const circumference = 2 * Math.PI * radius;
+    const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+    return (
+      <div className="flex flex-col items-center justify-center py-2">
+        <div className="relative w-20 h-20 flex items-center justify-center mb-3">
+          {/* Background Circle */}
+          <svg className="transform -rotate-90 w-full h-full drop-shadow-sm">
+            <circle cx="40" cy="40" r={radius} stroke="#f1f5f9" strokeWidth="6" fill="transparent" />
+            <circle
+              cx="40" cy="40" r={radius} stroke={color} strokeWidth="6"
+              fill="transparent" strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset} strokeLinecap="round"
+              className="transition-all duration-1000 ease-out"
+            />
+          </svg>
+          {/* Percentage Center */}
+          <div className="absolute inset-0 flex items-center justify-center">
+             <span className="text-sm font-bold text-slate-700">{percentage}%</span>
+          </div>
+        </div>
+        
+        {/* Labels below circle */}
+        <h4 className="text-sm font-bold text-slate-800 text-center leading-tight px-1 truncate w-full">
+            {label}
+        </h4>
+        <p className="text-[10px] text-slate-400 font-medium text-center mt-0.5">
+            {subLabel}
+        </p>
+      </div>
+    );
   };
 
   if (loading) return <LoadingSpinner />;
@@ -64,21 +84,19 @@ const HealthTracking = () => {
     <div className="min-h-full bg-slate-50 pb-24">
       
       {/* --- HEADER --- */}
-      <div className="bg-green-200 px-6 pt-10 pb-6 rounded-b-[2.5rem] shadow-sm mb-8 sticky top-0 z-20 border-b border-slate-100">
+      <div className="bg-green-200 px-6 pt-10 pb-6 rounded-b-[2.5rem] shadow-sm mb-6 sticky top-0 z-20 border-b border-slate-100">
         <div className="flex items-center space-x-3 mb-2">
           <div className="p-3 bg-blue-50 rounded-2xl">
             <Activity className="text-2xl text-blue-600" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Health Insights</h1>
         </div>
-        <p className="text-slate-500 text-sm ml-14">
-          Track your progress and stay consistent.
-        </p>
+        <p className="text-slate-500 text-sm ml-14">Your daily health overview.</p>
       </div>
 
-      <div className="px-5 max-w-7xl mx-auto space-y-8">
+      <div className="px-5 max-w-7xl mx-auto space-y-6">
 
-        {/* --- 1. OVERVIEW STATS CARDS --- */}
+     {/* --- 1. OVERVIEW STATS CARDS --- */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {/* Adherence Card */}
           <div className="bg-white p-5 rounded-2xl shadow-[0_2px_15px_rgb(0,0,0,0.03)] border border-slate-100 flex flex-col justify-between h-32">
@@ -140,20 +158,14 @@ const HealthTracking = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
-          {/* --- 2. WEEKLY PROGRESS CHART (Recharts) --- */}
-          <div className="bg-white rounded-3xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100 overflow-hidden">
-            <div className="p-6 border-b border-slate-50 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                  <BarChart3 className="text-blue-500" size={20} /> Weekly Trends
-                </h2>
-                <p className="text-xs text-slate-400 mt-1">Adherence over last 7 days</p>
-              </div>
+        {/* --- 2. WEEKLY CHART --- */}
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-4 border-b border-slate-50">
+              <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <BarChart3 className="text-blue-500" size={16} /> Weekly Trend
+              </h2>
             </div>
-            
-            <div className="h-64 w-full p-4">
+            <div className="h-40 w-full p-2">
               {trackingData.weeklyProgress ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={trackingData.weeklyProgress}>
@@ -164,122 +176,53 @@ const HealthTracking = () => {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis 
-                        dataKey="day" 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{fontSize: 12, fill: '#94a3b8'}} 
-                        dy={10}
-                    />
-                    <YAxis 
-                        hide 
-                        domain={[0, 100]} 
-                    />
-                    <Tooltip 
-                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
-                        cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }}
-                    />
-                    <Area 
-                        type="monotone" 
-                        dataKey="rate" 
-                        stroke="#3b82f6" 
-                        strokeWidth={3}
-                        fillOpacity={1} 
-                        fill="url(#colorRate)" 
-                        activeDot={{ r: 6, strokeWidth: 0, fill: '#2563eb' }}
-                    />
+                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} dy={5} />
+                    <YAxis hide domain={[0, 100]} />
+                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none' }} cursor={false} />
+                    <Area type="monotone" dataKey="rate" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorRate)" />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="h-full flex items-center justify-center text-slate-400 text-sm">
-                  No chart data available
-                </div>
+                <div className="h-full flex items-center justify-center text-slate-400 text-xs">No Data</div>
               )}
             </div>
-          </div>
+        </div>
 
-          {/* --- 3. MEDICINE BREAKDOWN --- */}
-          <div className="bg-white rounded-3xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100">
-            <div className="p-6 border-b border-slate-50">
-              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                <Pill className="text-purple-500" size={20} /> Medicine Performance
-              </h2>
-              <p className="text-xs text-slate-400 mt-1">Detailed breakdown by medicine</p>
-            </div>
-            
-            <div className="p-6 space-y-5">
+        {/* --- 3. MEDICINE PERFORMANCE (GRID BOXES) --- */}
+        <div>
+           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-1">Medicine Performance</h3>
+           
+           {/* ✅ FIX: Grid Layout + Reverse Order */}
+           <div className="grid grid-cols-2 gap-3">
               {trackingData.medicineBreakdown?.length > 0 ? (
-                trackingData.medicineBreakdown.map((medicine, index) => (
-                  <div key={index}>
-                    <div className="flex justify-between items-end mb-2">
-                        <div className="flex items-center gap-3">
-                            <div 
-                                className="w-3 h-3 rounded-full shadow-sm ring-2 ring-white"
-                                style={{ backgroundColor: medicine.color || '#3b82f6' }}
-                            ></div>
-                            <div>
-                                <p className="text-sm font-bold text-slate-800">{medicine.name}</p>
-                                <p className="text-[10px] text-slate-400">{medicine.doses} doses/day</p>
-                            </div>
-                        </div>
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${getAdherenceColor(medicine.adherence)}`}>
-                            {medicine.adherence}%
-                        </span>
-                    </div>
-                    {/* Native-style Progress Bar */}
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                        <div 
-                            className={`h-full rounded-full transition-all duration-1000 ${getProgressBarColor(medicine.adherence)}`}
-                            style={{ width: `${medicine.adherence}%` }}
-                        ></div>
-                    </div>
+                [...trackingData.medicineBreakdown].reverse().map((medicine, index) => (
+                  <div key={index} className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                     <CircleProgressBox 
+                        percentage={medicine.adherence}
+                        color={getStrokeColor(medicine.adherence)}
+                        label={medicine.name}
+                        subLabel={`${medicine.doses} doses/day`}
+                     />
                   </div>
                 ))
               ) : (
-                <div className="text-center py-10">
-                  <span className="text-4xl block mb-2 opacity-50">📊</span>
-                  <p className="text-slate-400 text-sm">No medicine data yet</p>
+                <div className="col-span-2 bg-white p-6 rounded-2xl border border-dashed border-slate-200 text-center">
+                  <p className="text-slate-400 text-sm">No medicines found</p>
                 </div>
               )}
-            </div>
-          </div>
+           </div>
         </div>
 
-        {/* --- 4. INSIGHTS SECTION --- */}
-        <div className="pt-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-1">Daily Insights</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                
-                <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 relative overflow-hidden">
-                    <Award className="text-4xl text-emerald-200 absolute -bottom-2 -right-2" />
-                    <div className="relative z-10">
-                        <h4 className="font-bold text-emerald-800 text-sm mb-1">Great Job!</h4>
-                        <p className="text-xs text-emerald-600 leading-relaxed">
-                            Your consistency is key to better health. Keep maintaining that streak!
-                        </p>
-                    </div>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 relative overflow-hidden">
-                    <Lightbulb className="text-4xl text-blue-200 absolute -bottom-2 -right-2" />
-                    <div className="relative z-10">
-                        <h4 className="font-bold text-blue-800 text-sm mb-1">Did you know?</h4>
-                        <p className="text-xs text-blue-600 leading-relaxed">
-                            Taking meds at the same time every day improves effectiveness by 20%.
-                        </p>
-                    </div>
-                </div>
-
-                <div className="bg-purple-50 border border-purple-100 rounded-2xl p-5 relative overflow-hidden">
-                    <Target className="text-4xl text-purple-200 absolute -bottom-2 -right-2" />
-                    <div className="relative z-10">
-                        <h4 className="font-bold text-purple-800 text-sm mb-1">Next Goal</h4>
-                        <p className="text-xs text-purple-600 leading-relaxed">
-                            Try to hit a perfect 100% adherence score for 3 days in a row!
-                        </p>
-                    </div>
-                </div>
-
+        {/* --- 4. INSIGHTS --- */}
+        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex gap-4">
+            <div className="bg-white p-2 rounded-full shadow-sm text-emerald-500 h-fit">
+                <Award size={18} />
+            </div>
+            <div>
+                <h4 className="font-bold text-emerald-900 text-sm">Keep it up!</h4>
+                <p className="text-xs text-emerald-700 mt-1">
+                    Consistent timing improves effectiveness by 20%.
+                </p>
             </div>
         </div>
 
@@ -289,6 +232,305 @@ const HealthTracking = () => {
 };
 
 export default HealthTracking;
+
+
+
+
+
+
+
+
+// import React, { useState, useEffect } from 'react';
+// import axios from 'axios';
+// import LoadingSpinner from '../LoadingSpinner';
+// import { 
+//   AreaChart, 
+//   Area, 
+//   XAxis, 
+//   YAxis, 
+//   CartesianGrid, 
+//   Tooltip, 
+//   ResponsiveContainer 
+// } from 'recharts';
+
+// // ✅ IMPORTING FROM OFFICIAL LUCIDE-REACT
+// import { 
+//   Activity, 
+//   Pill, 
+//   CheckCircle, 
+//   TrendingUp, 
+//   BarChart3, 
+//   Award, 
+//   Lightbulb, 
+//   Target 
+// } from "lucide-react";
+
+// const HealthTracking = () => {
+//   const [trackingData, setTrackingData] = useState({});
+//   const [loading, setLoading] = useState(true);
+
+//   // ✅ Fetch tracking stats from backend
+//   useEffect(() => {
+//     const fetchStats = async () => {
+//       try {
+//         const token = localStorage.getItem('token');
+//         const res = await axios.get('https://medmind-mobile.onrender.com/api/tracking/stats', {
+//           headers: { Authorization: `Bearer ${token}` }
+//         });
+//         setTrackingData(res.data);
+//       } catch (error) {
+//         console.error('Error fetching tracking stats:', error);
+//       } finally {
+//         setLoading(false);
+//       }
+//     };
+
+//     fetchStats();
+//   }, []);
+
+//   const getAdherenceColor = (rate) => {
+//     if (rate >= 90) return 'text-emerald-600 bg-emerald-100 border-emerald-200';
+//     if (rate >= 75) return 'text-amber-600 bg-amber-100 border-amber-200';
+//     return 'text-red-600 bg-red-100 border-red-200';
+//   };
+
+//   const getProgressBarColor = (rate) => {
+//     if (rate >= 90) return 'bg-emerald-500';
+//     if (rate >= 75) return 'bg-amber-500';
+//     return 'bg-red-500';
+//   };
+
+//   if (loading) return <LoadingSpinner />;
+
+//   return (
+//     <div className="min-h-full bg-slate-50 pb-24">
+      
+//       {/* --- HEADER --- */}
+//       <div className="bg-green-200 px-6 pt-10 pb-6 rounded-b-[2.5rem] shadow-sm mb-8 sticky top-0 z-20 border-b border-slate-100">
+//         <div className="flex items-center space-x-3 mb-2">
+//           <div className="p-3 bg-blue-50 rounded-2xl">
+//             <Activity className="text-2xl text-blue-600" />
+//           </div>
+//           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Health Insights</h1>
+//         </div>
+//         <p className="text-slate-500 text-sm ml-14">
+//           Track your progress and stay consistent.
+//         </p>
+//       </div>
+
+//       <div className="px-5 max-w-7xl mx-auto space-y-8">
+
+//         {/* --- 1. OVERVIEW STATS CARDS --- */}
+//         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+//           {/* Adherence Card */}
+//           <div className="bg-white p-5 rounded-2xl shadow-[0_2px_15px_rgb(0,0,0,0.03)] border border-slate-100 flex flex-col justify-between h-32">
+//             <div className="flex justify-between items-start">
+//               <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600">
+//                 <Activity size={20} />
+//               </div>
+//               <span className={`text-xs font-bold px-2 py-1 rounded-md ${getAdherenceColor(trackingData.adherenceRate)}`}>
+//                 {trackingData.adherenceRate}%
+//               </span>
+//             </div>
+//             <div>
+//               <p className="text-2xl font-bold text-slate-800">{trackingData.adherenceRate}%</p>
+//               <p className="text-xs text-slate-400 font-medium">Adherence Score</p>
+//             </div>
+//           </div>
+
+//           {/* Total Medicines */}
+//           <div className="bg-white p-5 rounded-2xl shadow-[0_2px_15px_rgb(0,0,0,0.03)] border border-slate-100 flex flex-col justify-between h-32">
+//             <div className="flex justify-between items-start">
+//               <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+//                 <Pill size={20} />
+//               </div>
+//             </div>
+//             <div>
+//               <p className="text-2xl font-bold text-slate-800">{trackingData.totalMedicines}</p>
+//               <p className="text-xs text-slate-400 font-medium">Total Medicines</p>
+//             </div>
+//           </div>
+
+//           {/* Active Now */}
+//           <div className="bg-white p-5 rounded-2xl shadow-[0_2px_15px_rgb(0,0,0,0.03)] border border-slate-100 flex flex-col justify-between h-32">
+//             <div className="flex justify-between items-start">
+//               <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600">
+//                 <CheckCircle size={20} />
+//               </div>
+//             </div>
+//             <div>
+//               <p className="text-2xl font-bold text-slate-800">{trackingData.activeMedicines}</p>
+//               <p className="text-xs text-slate-400 font-medium">Active Prescriptions</p>
+//             </div>
+//           </div>
+
+//           {/* Weekly Avg */}
+//           <div className="bg-white p-5 rounded-2xl shadow-[0_2px_15px_rgb(0,0,0,0.03)] border border-slate-100 flex flex-col justify-between h-32">
+//             <div className="flex justify-between items-start">
+//               <div className="p-2 bg-purple-50 rounded-lg text-purple-600">
+//                 <TrendingUp size={20} />
+//               </div>
+//             </div>
+//             <div>
+//               <p className="text-2xl font-bold text-slate-800">
+//                 {trackingData.weeklyProgress
+//                   ? Math.round(trackingData.weeklyProgress.reduce((a, b) => a + b.rate, 0) / 7)
+//                   : 0}%
+//               </p>
+//               <p className="text-xs text-slate-400 font-medium">7-Day Average</p>
+//             </div>
+//           </div>
+//         </div>
+
+//         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          
+//           {/* --- 2. WEEKLY PROGRESS CHART (Recharts) --- */}
+//           <div className="bg-white rounded-3xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100 overflow-hidden">
+//             <div className="p-6 border-b border-slate-50 flex items-center justify-between">
+//               <div>
+//                 <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+//                   <BarChart3 className="text-blue-500" size={20} /> Weekly Trends
+//                 </h2>
+//                 <p className="text-xs text-slate-400 mt-1">Adherence over last 7 days</p>
+//               </div>
+//             </div>
+            
+//             <div className="h-64 w-full p-4">
+//               {trackingData.weeklyProgress ? (
+//                 <ResponsiveContainer width="100%" height="100%">
+//                   <AreaChart data={trackingData.weeklyProgress}>
+//                     <defs>
+//                       <linearGradient id="colorRate" x1="0" y1="0" x2="0" y2="1">
+//                         <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
+//                         <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+//                       </linearGradient>
+//                     </defs>
+//                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+//                     <XAxis 
+//                         dataKey="day" 
+//                         axisLine={false} 
+//                         tickLine={false} 
+//                         tick={{fontSize: 12, fill: '#94a3b8'}} 
+//                         dy={10}
+//                     />
+//                     <YAxis 
+//                         hide 
+//                         domain={[0, 100]} 
+//                     />
+//                     <Tooltip 
+//                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
+//                         cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }}
+//                     />
+//                     <Area 
+//                         type="monotone" 
+//                         dataKey="rate" 
+//                         stroke="#3b82f6" 
+//                         strokeWidth={3}
+//                         fillOpacity={1} 
+//                         fill="url(#colorRate)" 
+//                         activeDot={{ r: 6, strokeWidth: 0, fill: '#2563eb' }}
+//                     />
+//                   </AreaChart>
+//                 </ResponsiveContainer>
+//               ) : (
+//                 <div className="h-full flex items-center justify-center text-slate-400 text-sm">
+//                   No chart data available
+//                 </div>
+//               )}
+//             </div>
+//           </div>
+
+//           {/* --- 3. MEDICINE BREAKDOWN --- */}
+//           <div className="bg-white rounded-3xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100">
+//             <div className="p-6 border-b border-slate-50">
+//               <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+//                 <Pill className="text-purple-500" size={20} /> Medicine Performance
+//               </h2>
+//               <p className="text-xs text-slate-400 mt-1">Detailed breakdown by medicine</p>
+//             </div>
+            
+//             <div className="p-6 space-y-5">
+//               {trackingData.medicineBreakdown?.length > 0 ? (
+//                 trackingData.medicineBreakdown.map((medicine, index) => (
+//                   <div key={index}>
+//                     <div className="flex justify-between items-end mb-2">
+//                         <div className="flex items-center gap-3">
+//                             <div 
+//                                 className="w-3 h-3 rounded-full shadow-sm ring-2 ring-white"
+//                                 style={{ backgroundColor: medicine.color || '#3b82f6' }}
+//                             ></div>
+//                             <div>
+//                                 <p className="text-sm font-bold text-slate-800">{medicine.name}</p>
+//                                 <p className="text-[10px] text-slate-400">{medicine.doses} doses/day</p>
+//                             </div>
+//                         </div>
+//                         <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${getAdherenceColor(medicine.adherence)}`}>
+//                             {medicine.adherence}%
+//                         </span>
+//                     </div>
+//                     {/* Native-style Progress Bar */}
+//                     <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+//                         <div 
+//                             className={`h-full rounded-full transition-all duration-1000 ${getProgressBarColor(medicine.adherence)}`}
+//                             style={{ width: `${medicine.adherence}%` }}
+//                         ></div>
+//                     </div>
+//                   </div>
+//                 ))
+//               ) : (
+//                 <div className="text-center py-10">
+//                   <span className="text-4xl block mb-2 opacity-50">📊</span>
+//                   <p className="text-slate-400 text-sm">No medicine data yet</p>
+//                 </div>
+//               )}
+//             </div>
+//           </div>
+//         </div>
+
+//         {/* --- 4. INSIGHTS SECTION --- */}
+//         <div className="pt-4">
+//             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-1">Daily Insights</h3>
+//             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+//                 <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 relative overflow-hidden">
+//                     <Award className="text-4xl text-emerald-200 absolute -bottom-2 -right-2" />
+//                     <div className="relative z-10">
+//                         <h4 className="font-bold text-emerald-800 text-sm mb-1">Great Job!</h4>
+//                         <p className="text-xs text-emerald-600 leading-relaxed">
+//                             Your consistency is key to better health. Keep maintaining that streak!
+//                         </p>
+//                     </div>
+//                 </div>
+
+//                 <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 relative overflow-hidden">
+//                     <Lightbulb className="text-4xl text-blue-200 absolute -bottom-2 -right-2" />
+//                     <div className="relative z-10">
+//                         <h4 className="font-bold text-blue-800 text-sm mb-1">Did you know?</h4>
+//                         <p className="text-xs text-blue-600 leading-relaxed">
+//                             Taking meds at the same time every day improves effectiveness by 20%.
+//                         </p>
+//                     </div>
+//                 </div>
+
+//                 <div className="bg-purple-50 border border-purple-100 rounded-2xl p-5 relative overflow-hidden">
+//                     <Target className="text-4xl text-purple-200 absolute -bottom-2 -right-2" />
+//                     <div className="relative z-10">
+//                         <h4 className="font-bold text-purple-800 text-sm mb-1">Next Goal</h4>
+//                         <p className="text-xs text-purple-600 leading-relaxed">
+//                             Try to hit a perfect 100% adherence score for 3 days in a row!
+//                         </p>
+//                     </div>
+//                 </div>
+
+//             </div>
+//         </div>
+
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default HealthTracking;
 
 
 

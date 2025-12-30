@@ -1,10 +1,14 @@
 import React from 'react';
+import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext'; // Adjusted path to step out of 'pages' and 'components'
 import { useNavigate } from 'react-router-dom';
+import ConfirmationModal from '../ConfirmationModal';
 
 const MorePage = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const menuItems = [
     { 
@@ -72,18 +76,34 @@ const MorePage = () => {
       </div>
 
       {/* Logout Button */}
-      <div className="p-4 mt-6">
+      <div className="px-4 mt-6">
         <button 
-          onClick={logout}
-          className="w-full bg-red-50 text-red-600 font-medium py-3 rounded-xl border border-red-100 hover:bg-red-100 transition-colors"
+          onClick={() => setShowLogoutConfirm(true)} // 👈 OPEN MODAL
+          className="w-full bg-white text-red-500 font-bold py-4 rounded-2xl border border-red-100 shadow-sm hover:bg-red-50 active:scale-95 transition-all flex items-center justify-center gap-2"
         >
-          Log Out
+          <span>Log Out</span>
         </button>
       </div>
       
       <div className="text-center mt-4 text-xs text-gray-400">
         MedMind v1.0.0
       </div>
+
+      {/* 🟢 2. ADD THE CONFIRMATION MODAL */}
+      <ConfirmationModal
+        isOpen={showLogoutConfirm}
+        title="Confirm Logout?"
+        message="Logging out will clear unsaved local data. Please ensure you are online to sync before leaving."
+        confirmText="Yes, Logout"
+        cancelText="Cancel"
+        isDanger={true}
+        onConfirm={() => {
+            setShowLogoutConfirm(false);
+            logout(); // The real logout function
+        }}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
+
     </div>
   );
 };

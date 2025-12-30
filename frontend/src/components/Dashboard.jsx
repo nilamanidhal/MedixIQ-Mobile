@@ -8,6 +8,7 @@ import { Network } from '@capacitor/network';
 import { Check, AlertCircle, Clock, Circle } from "lucide-react";
 import PendingReviewModal from './PendingReviewModal';
 import AiChatbot from './AiChatbot';
+import ProfilePopup from './ProfilePopup';
 
 
 // Helper to open settings
@@ -46,6 +47,7 @@ const Dashboard = () => {
     const [todaysDoses, setTodaysDoses] = useState([]); 
     const [isOnline, setIsOnline] = useState(true);
     const [now, setNow] = useState(new Date()); // State for live time updates
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
 
 // Modal State
     const [showReviewModal, setShowReviewModal] = useState(false);
@@ -226,8 +228,22 @@ const Dashboard = () => {
                         </h1>
                         <p className="text-slate-500 text-sm mt-1 font-medium">Let's stay healthy today.</p>
                     </div>
-                    <div className="w-12 h-12 bg-gradient-to-tr from-blue-100 to-blue-50 rounded-full flex items-center justify-center text-blue-600 font-bold shadow-sm border border-blue-100">
-                        {user?.name?.[0] || 'U'}
+
+                    {/* 🟢 CLICKABLE PROFILE AVATAR */}
+                   <div className="relative">
+                        <button 
+                            onClick={() => setIsProfileOpen(!isProfileOpen)}
+                            className="w-12 h-12 bg-gradient-to-tr from-blue-100 to-blue-50 rounded-full flex items-center justify-center text-blue-600 font-bold shadow-sm border border-blue-100 active:scale-95 transition-transform"
+                        >
+                            {user?.name?.[0] || 'U'}
+                        </button>
+
+                        {/* 🟢 THE POPUP COMPONENT */}
+                        <ProfilePopup 
+                            isOpen={isProfileOpen} 
+                            onClose={() => setIsProfileOpen(false)} 
+                        />
+
                     </div>
                 </div>
 
