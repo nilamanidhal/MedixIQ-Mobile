@@ -57,7 +57,8 @@ router.post('/register', [
         name: user.name,
         email: user.email,
         age: user.age,
-        gender: user.gender
+        gender: user.gender,
+        createdAt: user.createdAt
       }
     });
   } catch (error) {
@@ -112,7 +113,8 @@ router.post('/login', [
         name: user.name,
         email: user.email,
         age: user.age,
-        gender: user.gender
+        gender: user.gender,
+        createdAt: user.createdAt
       }
     });
   } catch (error) {
@@ -130,7 +132,8 @@ router.get('/profile', authMiddleware, async (req, res) => {
         name: req.user.name,
         email: req.user.email,
         age: req.user.age,
-        gender: req.user.gender
+        gender: req.user.gender,
+        createdAt: req.user.createdAt
       }
     });
   } catch (error) {
@@ -174,7 +177,8 @@ router.put('/profile', authMiddleware, [
         name: user.name,
         email: user.email,
         age: user.age,
-        gender: user.gender
+        gender: user.gender,
+        createdAt: user.createdAt
       }
     });
   } catch (error) {
