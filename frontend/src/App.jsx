@@ -1,6 +1,7 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { App as CapacitorApp } from '@capacitor/app';
 
 // Layout & Components
 import MobileLayout from './components/MobileLayout';
@@ -17,6 +18,51 @@ import ContactPage from './components/pages/ContactPage';
 import MorePage from './components/pages/MorePage';
 import MedicalRecords from './components/pages/MedicalRecords';
 
+
+// 🟢 1. Create a Helper Component to Handle Back Button
+const BackButtonHandler = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const handleBackButton = async () => {
+      const currentPath = location.pathname;
+
+      // 1. Define Explicit "Parent" Paths
+      // (If I am on Key, go to Value)
+      const parentRoutes = {
+        '/history': '/more',           // History -> More
+        '/medical-records': '/more',   // Prescriptions -> More
+        '/contact': '/more',           // Contact -> More
+        '/more': '/dashboard',         // More -> Dashboard
+        '/health-tracking': '/dashboard', // Health -> Dashboard
+        '/add-medicine': '/dashboard', // Add Med -> Dashboard
+      };
+
+      // 2. Define Exit Routes (Where the App Closes)
+      const exitRoutes = ['/', '/login', '/dashboard'];
+
+      if (exitRoutes.includes(currentPath)) {
+        // Exit App
+        CapacitorApp.exitApp();
+      } else if (parentRoutes[currentPath]) {
+        // Go to specific parent (Enforces your hierarchy)
+        navigate(parentRoutes[currentPath]);
+      } else {
+        // Default: Go back one step
+        navigate(-1);
+      }
+    };
+
+    const listener = CapacitorApp.addListener('backButton', handleBackButton);
+
+    return () => {
+      listener.then(handler => handler.remove());
+    };
+  }, [navigate, location]);
+
+  return null;
+};
 
 // --- 🔒 Protected Route (For App Pages) ---
 // If NOT logged in -> Go to Login
@@ -45,6 +91,10 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+
+      {/* ✅ PLACE IT HERE: Inside Router, Outside Routes */}
+        <BackButtonHandler />
+
         <Routes>
           
           {/* 🔥 WRAP LOGIN IN PUBLIC ROUTE */}

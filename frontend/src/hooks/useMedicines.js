@@ -81,6 +81,19 @@ export const useMedicines = () => {
             window.removeEventListener('medmind_data_updated', updateListener);
         };
     }, []);
+
+    // 🟢 2. FIX: RELOAD DATA WHEN USER LOGS IN (Token Changes)
+    useEffect(() => {
+        if (token) {
+            console.log("🔑 Token detected, fetching fresh data from server...");
+            // Pass 'false' to force a server fetch even if cache is empty
+            loadData(false); 
+        } else {
+            // If token is removed (logout), clear the state
+            setMedicines([]);
+            setLogs([]);
+        }
+    }, [token]); // 👈 This dependency ensures it runs exactly when login finishes
     
     // --- GENERATE MISSING LOGS ---
     const generatePendingLogs = (currentMeds, currentLogs) => {
@@ -694,6 +707,32 @@ export const useMedicines = () => {
         }
     };
 
+    // --- 🆕 FEATURE: RESYNC ALARMS ---
+    const syncAlarms = async () => {
+        // 1. Get latest medicines from cache (Source of Truth)
+        const currentMeds = getCachedMedicines();
+        
+        if (currentMeds.length === 0) return { success: false, message: "No medicines to sync." };
+
+        console.log(`🔄 Rescheduling alarms for ${currentMeds.length} medicines...`);
+
+        try {
+            // 2. Loop through and schedule each active medicine
+            let count = 0;
+            for (const med of currentMeds) {
+                // Only schedule if it's Active and NOT Paused
+                if (med.isActive && !med.isPaused) {
+                    await scheduleMedicineReminder(med);
+                    count++;
+                }
+            }
+            return { success: true, message: `Rescheduled ${count} active medicines.` };
+        } catch (error) {
+            console.error("Sync Alarms Error:", error);
+            return { success: false, message: "Failed to sync alarms." };
+        }
+    };
+
     const fetchLogs = async () => getCachedLogs();
     const fetchFullHistory = async () => {}; 
 
@@ -701,7 +740,8 @@ export const useMedicines = () => {
         medicines, logs, loading, lastSyncTime, 
         fetchMedicines: loadData, fetchFullHistory,
         addMedicine, updateMedicine, deleteMedicine, toggleMuteMedicine, togglePauseMedicine,
-        handleNotificationAction, addManualLog, updateLogStatus, syncOfflineData, fetchLogs 
+        handleNotificationAction, addManualLog, updateLogStatus, syncOfflineData, fetchLogs,
+        syncAlarms
     };
 };
 

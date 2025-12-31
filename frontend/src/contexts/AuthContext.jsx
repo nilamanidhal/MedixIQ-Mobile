@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { Network } from '@capacitor/network';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 const AuthContext = createContext();
 
@@ -110,18 +111,29 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    // 6. LOGOUT
-    const logout = () => {
+    //LOGOUT
+    const logout = async () => {
+        try {
+        // 🛑 1. CANCEL ALL SCHEDULED ALARMS
+        // We get all pending notifications and cancel them immediately.
+        const pending = await LocalNotifications.getPending();
+        if (pending.notifications.length > 0) {
+            await LocalNotifications.cancel(pending);
+            console.log("🔔 All alarms cancelled on logout");
+        }
+    } catch (error) {
+        console.error("Error cancelling notifications:", error);
+    }
         localStorage.removeItem('token');
         localStorage.removeItem('user_data');
-        setToken(null);
-        setUser(null);
 
-        // 2. 🔥 SECURITY FIX: WIPE ALL OFFLINE DATA
+        //SECURITY FIX: WIPE ALL OFFLINE DATA
     localStorage.removeItem('cached_medicines');
     localStorage.removeItem('cached_medicine_logs');
     localStorage.removeItem('offline_mutation_queue');
-        // Optional: clear any other offline queues here if you want security over convenience
+
+     setToken(null);
+        setUser(null);
     };
     
     // 7. UPDATE PROFILE

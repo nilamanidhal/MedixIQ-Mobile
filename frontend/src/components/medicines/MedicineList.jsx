@@ -12,7 +12,7 @@ import {
 } from "react-icons/lu";
 
 const MedicineList = ({ onEdit }) => {
-    const { medicines, loading, deleteMedicine, toggleMuteMedicine, togglePauseMedicine } = useMedicines();
+    const { medicines, loading, deleteMedicine, toggleMuteMedicine, togglePauseMedicine, syncAlarms } = useMedicines();
     const [isSyncing, setIsSyncing] = useState(false);
 
     // --- 1. MODAL STATE CONFIGURATION ---
@@ -32,30 +32,35 @@ const MedicineList = ({ onEdit }) => {
     // --- 2. ACTION HANDLERS (Now utilizing the Modal) ---
 
     const handleResyncAlarms = () => {
-        if (medicines.length === 0) return alert("No medicines to sync.");
+        // 🟢 Filter: Count only Active & Not Paused medicines
+        const activeMedsCount = medicines.filter(m => 
+            m.isActive && 
+            !m.isPaused && 
+            !isExpired(m.duration?.endDate)
+        ).length;
+
+        if (activeMedsCount === 0) {
+            return alert("No active medicines to sync reminders for.");
+        }
 
         setModalConfig({
             isOpen: true,
             title: "Sync Alarms",
-            message: `This will reset and reschedule reminders for all ${medicines.length} medicines.`,
+            message: `This will reschedule reminders for your ${activeMedsCount} active medicines. Paused or expired medicines will be skipped.`,
             confirmText: "Sync Now",
             isDanger: false,
             onConfirm: async () => {
                 setIsSyncing(true);
                 closeModal(); // Close immediately so we can show syncing state
-                try {
-                    let count = 0;
-                    for (const med of medicines) {
-                        await scheduleMedicineReminder(med);
-                        count++;
-                    }
-                    // Optional: You could use a toast here instead of alert
-                    // alert(`✅ Success! Scheduled alarms for ${count} medicines.`);
-                } catch (err) { 
-                    console.error("Sync error", err);
-                } finally { 
-                    setIsSyncing(false); 
-                }
+              
+                // 🛑 USE THE SHARED FUNCTION (Cleaner & Consistent)
+                const result = await syncAlarms();
+                
+                setIsSyncing(false);
+                
+                // Optional: Show result alert
+                if (result.success) alert("Alarms synchronized");
+                else alert("Failed to sync alarms");
             }
         });
     };
