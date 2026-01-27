@@ -8,7 +8,7 @@ const authMiddleware = require('../middleware/auth');
 const router = express.Router();
 
 /* =========================================================
-   LOGS ROUTES (Specific)
+   LOGS ROUTES (SYNC)
    ========================================================= */
 
 // 1. GET FULL HISTORY
@@ -19,65 +19,58 @@ router.get('/logs', authMiddleware, async (req, res) => {
       .sort({ createdAt: -1 });
     res.json({ logs });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ message: 'Error fetching logs' });
   }
 });
 
-// 2. CREATE LOG (From Offline Sync)
+// 2. CREATE LOG (ATOMIC FIX)
 router.post('/logs', authMiddleware, async (req, res) => {
   try {
     const { clientLogId, medicineClientId, status, date, time } = req.body;
 
-    // 🔎 Find Medicine (Handle both Real ID and Client ID)
+    // 1. Find the Medicine safely
     const medicine = await Medicine.findOne({
       userId: req.user._id,
       $or: [
           { clientId: medicineClientId },
-          { _id: (medicineClientId && medicineClientId.match(/^[0-9a-fA-F]{24}$/) ? medicineClientId : null) }
+          { _id: (medicineClientId && mongoose.Types.ObjectId.isValid(medicineClientId) ? medicineClientId : null) }
       ]
     });
 
     if (!medicine) {
-      return res.status(404).json({ message: 'Medicine not found for log' });
+        return res.status(404).json({ message: 'Medicine not found for log' });
     }
 
-    // 🔁 Idempotency Check: Does this log already exist?
-    // We check by clientLogId OR by date/time/medicine combo to prevent duplicates
-    let existingLog = await MedicineLog.findOne({ 
-        userId: req.user._id, 
-        $or: [
-            { clientLogId: clientLogId },
-            { medicineId: medicine._id, date: new Date(date), time: time }
-        ]
-    });
+    // 2. ATOMIC UPSERT: Prevent Duplicates
+    // "Find by clientLogId. If found, update status. If not, insert new."
+    const log = await MedicineLog.findOneAndUpdate(
+        { 
+            userId: req.user._id, 
+            clientLogId: clientLogId // 👈 The Unique Key
+        },
+        {
+            $set: {
+                userId: req.user._id,
+                clientLogId: clientLogId,
+                medicineClientId: medicineClientId,
+                medicineId: medicine._id,
+                status: status,
+                date: new Date(date),
+                time: time
+            }
+        },
+        { 
+            upsert: true, // 👈 Create if missing
+            new: true,    // 👈 Return the document
+            setDefaultsOnInsert: true 
+        }
+    );
 
-    if (existingLog) {
-      // If log exists, UPDATE the status!
-      if (existingLog.status !== status) {
-          existingLog.status = status;
-          await existingLog.save();
-      }
-      return res.json({ log: existingLog });
-    }
-
-    // Create New Log
-    const log = new MedicineLog({
-      userId: req.user._id,
-      clientLogId,
-      medicineClientId,
-      medicineId: medicine._id,
-      status,
-      date: new Date(date),
-      time
-    });
-
-    await log.save();
     res.status(201).json({ log });
 
   } catch (err) {
-    console.error("Create Log Error:", err);
-    res.status(500).json({ message: 'Error creating log' });
+    console.error("Log Sync Error:", err);
+    res.status(500).json({ message: 'Error syncing log' });
   }
 });
 
@@ -87,30 +80,30 @@ router.put('/logs/:logId', authMiddleware, async (req, res) => {
     const { status } = req.body;
     const { logId } = req.params;
 
-    // Handle temporary/invalid IDs gracefully
-    if (!mongoose.Types.ObjectId.isValid(logId)) {
-        return res.status(404).json({ message: 'Invalid Log ID format' });
-    }
+    // Use findOneAndUpdate here too for safety
+    const log = await MedicineLog.findOneAndUpdate(
+        { 
+            userId: req.user._id,
+            $or: [
+                { _id: (mongoose.Types.ObjectId.isValid(logId) ? logId : null) },
+                { clientLogId: logId }
+            ]
+        },
+        { $set: { status: status } },
+        { new: true }
+    );
 
-    const log = await MedicineLog.findOne({ _id: logId, userId: req.user._id });
-
-    if (!log) {
-      return res.status(404).json({ message: 'Log not found' });
-    }
-
-    log.status = status;
-    await log.save();
+    if (!log) return res.status(404).json({ message: 'Log not found' });
 
     res.json({ log });
   } catch (err) {
-    console.error("Update Log Error:", err);
     res.status(500).json({ message: 'Error updating log' });
   }
 });
 
 
 /* ---------------------------------------------------------
-   MEDICINE ROUTES (Generic)
+   MEDICINE ROUTES (SYNC)
    --------------------------------------------------------- */
 
 // GET ALL MEDICINES
@@ -123,50 +116,49 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
-// ADD MEDICINE
+// ADD MEDICINE (ATOMIC FIX - NO DUPLICATES)
 router.post('/', authMiddleware, [
-    body('name').notEmpty(),
-    body('dose').notEmpty(),
-    body('times').isArray({ min: 1 }),
-    body('duration.startDate').isISO8601(),
-    body('duration.endDate').isISO8601()
+    body('name').notEmpty()
   ], async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    const { clientId, name, dose, times, duration, notes, rxcui } = req.body;
+    const finalClientId = clientId || `server_${Date.now()}`;
 
-    const { clientId, name, dose, times, duration, notes } = req.body;
-
-    // Idempotency Check
-    const existing = await Medicine.findOne({ userId: req.user._id, clientId });
-    if (existing) return res.json({ medicine: existing });
-
-    const medicine = new Medicine({
-      userId: req.user._id,
-      clientId: clientId || `server_${Date.now()}`,
-      name,
-      dose,
-      times,
-      duration: { startDate: new Date(duration.startDate), endDate: new Date(duration.endDate) },
-      notes
-    });
-
-    await medicine.save();
-    res.status(201).json({ medicine });
-  } catch (err) {
-    // 🛡️ 2. CATCH THE DUPLICATE ERROR (Code 11000)
-    // This catches the Race Condition that manual checks miss
-    if (err.code === 11000 && (err.keyPattern?.clientId || err.keyValue?.clientId)) {
-        console.log(`⚠️ Prevented Duplicate Medicine: ${req.body.clientId}`);
-        
-        // Find the winner of the race and return it
-        const existing = await Medicine.findOne({ clientId: req.body.clientId });
-        if (existing) {
-            return res.status(200).json({ medicine: existing });
+    // 🟢 ATOMIC UPSERT
+    // This runs as ONE command in the database.
+    // If Request A and Request B hit at the exact same time:
+    // 1. DB sees Request A -> Creates Document.
+    // 2. DB sees Request B (same clientId) -> UPDATES Document A (does nothing effectively).
+    // Result: 1 Document.
+    const medicine = await Medicine.findOneAndUpdate(
+        { 
+            userId: req.user._id, 
+            clientId: finalClientId 
+        },
+        {
+            $set: {
+                userId: req.user._id,
+                clientId: finalClientId,
+                name,
+                dose,
+                times,
+                duration: { startDate: new Date(duration.startDate), endDate: new Date(duration.endDate) },
+                notes,
+                rxcui,
+                isActive: true
+            }
+        },
+        { 
+            upsert: true, 
+            new: true,    
+            setDefaultsOnInsert: true 
         }
-    }
+    );
 
-    console.error(err);
+    res.status(201).json({ medicine });
+
+  } catch (err) {
+    console.error("Medicine Sync Error:", err);
     res.status(500).json({ message: 'Error adding medicine' });
   }
 });
@@ -185,10 +177,14 @@ router.get('/:id', authMiddleware, async (req, res) => {
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(404).json({ message: 'Invalid ID' });
-    const medicine = await Medicine.findOne({ _id: req.params.id, userId: req.user._id });
+    
+    const medicine = await Medicine.findOneAndUpdate(
+        { _id: req.params.id, userId: req.user._id },
+        { $set: req.body },
+        { new: true }
+    );
+
     if (!medicine) return res.status(404).json({ message: 'Medicine not found' });
-    Object.assign(medicine, req.body);
-    await medicine.save();
     res.json({ medicine });
   } catch (err) { res.status(500).json({ message: 'Error updating medicine' }); }
 });
@@ -197,32 +193,30 @@ router.put('/:id', authMiddleware, async (req, res) => {
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(404).json({ message: 'Invalid ID' });
-    const medicine = await Medicine.findOne({ _id: req.params.id, userId: req.user._id });
+    
+    // Soft Delete
+    const medicine = await Medicine.findOneAndUpdate(
+        { _id: req.params.id, userId: req.user._id },
+        { $set: { isActive: false } },
+        { new: true }
+    );
+
     if (!medicine) return res.status(404).json({ message: 'Medicine not found' });
-    medicine.isActive = false;
-    await medicine.save();
 
-    // 2. SAFETY NET: Remove Future Logs
-    // Even though the frontend shouldn't send them, this cleans up any 
-    // leftovers from old app versions or sync errors.
-    const Log = require('../models/MedicineLog'); // Adjust path if needed
+    // Clean up Future Logs
+    const Log = require('../models/MedicineLog'); 
     const now = new Date();
-
     await Log.deleteMany({
         medicineId: medicine._id,
         status: 'pending',
-        date: { $gt: now } // Only delete if date is strictly in the future
+        date: { $gt: now } 
     });
-
     
     res.json({ message: 'Medicine deleted' });
   } catch (err) { res.status(500).json({ message: 'Error deleting medicine' }); }
 });
 
 module.exports = router;
-
-
-
 
 
 
