@@ -143,7 +143,7 @@ router.post('/', authMiddleware, [
 
     const medicine = new Medicine({
       userId: req.user._id,
-      clientId,
+      clientId: clientId || `server_${Date.now()}`,
       name,
       dose,
       times,
@@ -154,6 +154,18 @@ router.post('/', authMiddleware, [
     await medicine.save();
     res.status(201).json({ medicine });
   } catch (err) {
+    // 🛡️ 2. CATCH THE DUPLICATE ERROR (Code 11000)
+    // This catches the Race Condition that manual checks miss
+    if (err.code === 11000 && (err.keyPattern?.clientId || err.keyValue?.clientId)) {
+        console.log(`⚠️ Prevented Duplicate Medicine: ${req.body.clientId}`);
+        
+        // Find the winner of the race and return it
+        const existing = await Medicine.findOne({ clientId: req.body.clientId });
+        if (existing) {
+            return res.status(200).json({ medicine: existing });
+        }
+    }
+
     console.error(err);
     res.status(500).json({ message: 'Error adding medicine' });
   }

@@ -45,6 +45,8 @@ const medicineSchema = new mongoose.Schema({
  // ⭐ OFFLINE STABLE ID
   clientId: {
     type: String,
+    unique: true, // 👈 THIS IS THE KEY FIX
+    sparse: true, // 👈 Allows old items without a clientId (safety)
     index: true
   },
   // 🔥 NEW FIELDS FOR PAUSE & MUTE
