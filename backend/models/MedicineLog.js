@@ -11,6 +11,8 @@ const medicineLogSchema = new mongoose.Schema({
   // ⭐ OFFLINE LOG ID
   clientLogId: {
     type: String,
+    required: true,
+    unique: true,
     index: true
   },
   date: { type: Date, required: true },  // scheduled date
