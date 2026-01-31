@@ -53,6 +53,9 @@ const Dashboard = () => {
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [overdueLogs, setOverdueLogs] = useState([]);
 
+// Track processed IDs to prevent them from reappearing during this session
+    const [processedLogIds, setProcessedLogIds] = useState(new Set());
+
 // 🛑 NEW: Prevents modal from re-opening if user manually closed it this session
     const hasClosedModalRef = useRef(false);
 
@@ -156,9 +159,17 @@ const Dashboard = () => {
                 });
 
                 let status = 'pending';
+                let logId = null;
                 if (existingLog) {
                     status = existingLog.status;
+                    logId = existingLog._id;
                     if (status === 'taken') takenCount++;
+                }
+
+                // 🔥 CHECK IF PROCESSED LOCALLY
+                if (logId && processedLogIds.has(logId)) {
+                    // If we just clicked it, trust that it's done, don't show as pending
+                    if (status === 'pending') status = 'taken'; // optimistically hide from pending list
                 }
 
                 const [h, m] = time.split(':').map(Number);
@@ -181,8 +192,10 @@ const Dashboard = () => {
                 // 3. Time must be in the past
                 if (existingLog && status === 'pending' && doseTime < now) {
                     // Add extra check to prevent popup for just-scheduled items (optional 1 min buffer)
-                        pendingOverdue.push(existingLog);
+                    if (!processedLogIds.has(existingLog._id)) {
+                    pendingOverdue.push(existingLog);
                 }
+            }
             });
         });
 
@@ -196,19 +209,29 @@ const Dashboard = () => {
         setNextDose(upcoming || null);
 
         // Update Modal Data
-        setOverdueLogs(pendingOverdue);
-        if (pendingOverdue.length > 0) {
+        // Only update if we haven't manually closed it
+        if (!hasClosedModalRef.current && pendingOverdue.length > 0) {
+            setOverdueLogs(pendingOverdue);
             setShowReviewModal(true);
+        } else if (pendingOverdue.length === 0) {
+            setShowReviewModal(false);
         }
     };
 
-    // --- 3. HANDLE MODAL ACTIONS ---
-    const handleReviewAction = async (logId, status) => {
-        // This updates the EXISTING log. It does NOT create a duplicate.
-        // It preserves the original scheduled time.
+    // --- 🟢 3. HANDLE MODAL ACTIONS (INSTANT UI UPDATE) ---
+   const handleReviewAction = async (logId, status) => {
+        // 1. INSTANTLY Remove from Local Modal List
+        setOverdueLogs(prevLogs => {
+            const newList = prevLogs.filter(log => log._id !== logId);
+            if (newList.length === 0) setShowReviewModal(false);
+            return newList;
+        });
+
+        // 2. Mark ID as processed 
+        setProcessedLogIds(prev => new Set(prev).add(logId));
+
+        // 3. Send to Database
         await updateLogStatus(logId, status);
-        
-        // UI updates automatically via useEffect
     };
 
     // SVG Math
