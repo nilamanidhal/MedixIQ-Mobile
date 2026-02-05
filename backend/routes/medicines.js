@@ -121,7 +121,7 @@ router.post('/', authMiddleware, [
     body('name').notEmpty()
   ], async (req, res) => {
   try {
-    const { clientId, name, dose, times, duration, notes, rxcui } = req.body;
+    const { clientId, name, dose, times, duration, notes, rxcui, condition} = req.body;
     const finalClientId = clientId || `server_${Date.now()}`;
 
     // 🟢 ATOMIC UPSERT
