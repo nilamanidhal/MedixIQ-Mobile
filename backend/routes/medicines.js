@@ -145,6 +145,7 @@ router.post('/', authMiddleware, [
                 duration: { startDate: new Date(duration.startDate), endDate: new Date(duration.endDate) },
                 notes,
                 rxcui,
+                condition: condition || '',
                 isActive: true
             }
         },
