@@ -1,10 +1,10 @@
 const express = require('express');
-const authMiddleware = require('../middleware/auth');
-const Medicine = require('../models/Medicine');
-const MedicineLog = require('../models/MedicineLog');
-
 const router = express.Router();
+const authMiddleware = require('../middleware/auth');
+const MedicineLog = require('../models/MedicineLog');
+const Medicine = require('../models/Medicine');
 
+// GET STATS (With 30-day range and Heatmap support)
 router.get('/stats', authMiddleware, async (req, res) => {
   try {
     // 1. GET RANGE FROM FRONTEND (Default to 7)
@@ -37,17 +37,15 @@ router.get('/stats', authMiddleware, async (req, res) => {
         const dayName = d.toLocaleDateString('en-US', { weekday: 'short' }); // "Mon"
 
         // Find logs for this specific date
-        // (Assuming you store date as ISO or Date object in DB)
         const dayLogs = logs.filter(l => {
             const logDate = new Date(l.date).toISOString().split('T')[0];
             return logDate === dateString;
         });
 
         let rate = 0;
-        let status = 'neutral';
 
         if (dayLogs.length === 0) {
-            // 🟢 CRITICAL: No meds scheduled for this day
+            // 🟢 CRITICAL: No meds scheduled for this day (Rest Day)
             rate = -1; 
         } else {
             const taken = dayLogs.filter(l => l.status === 'taken').length;
@@ -86,7 +84,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
 
         return {
             name: med.name,
-            doses: med.times.length, // Doses per day (static from medicine info)
+            doses: med.times.length, // Doses per day
             adherence: rate
         };
     });
@@ -96,9 +94,9 @@ router.get('/stats', authMiddleware, async (req, res) => {
     // ==========================================
     res.json({
         adherenceRate,
-        totalMedicines: medicines.length, // All time added (or active)
+        totalMedicines: medicines.length, // All time added (active)
         activeMedicines: medicines.filter(m => m.isActive && !m.isPaused).length,
-        weeklyProgress: progressData, // Renamed in frontend to just 'data' usually, but keep name for compatibility
+        weeklyProgress: progressData, 
         medicineBreakdown
     });
 
@@ -108,6 +106,8 @@ router.get('/stats', authMiddleware, async (req, res) => {
   }
 });
 
+// 👇 THIS LINE IS CRITICAL. IT WAS LIKELY MISSING.
+module.exports = router;
 
 
 
