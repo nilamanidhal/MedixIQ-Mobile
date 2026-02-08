@@ -217,6 +217,18 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ message: 'Error deleting medicine' }); }
 });
 
+// GET FULL HISTORY (Active + Inactive)
+router.get('/history-all', authMiddleware, async (req, res) => {
+  try {
+    // Fetch ALL (Active & Inactive) sorted by creation
+    const medicines = await Medicine.find({ userId: req.user._id })
+      .sort({ createdAt: -1 });
+    res.json({ medicines });
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching history' });
+  }
+});
+
 module.exports = router;
 
 
