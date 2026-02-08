@@ -1,3 +1,10 @@
+const express = require('express');
+const authMiddleware = require('../middleware/auth');
+const Medicine = require('../models/Medicine');
+const MedicineLog = require('../models/MedicineLog');
+
+const router = express.Router();
+
 router.get('/stats', authMiddleware, async (req, res) => {
   try {
     // 1. GET RANGE FROM FRONTEND (Default to 7)
