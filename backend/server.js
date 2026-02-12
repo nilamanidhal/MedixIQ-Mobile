@@ -22,7 +22,7 @@ const allowedOrigins = [
   "http://localhost:5173", // Dev frontend
   "https://medmind-heathy.netlify.app",
   "https://medmind-heathcare.netlify.app",
-  "https://medmind-admin.netlify.app",
+  "https://medixiq-admin.netlify.app",
    "http://localhost",
    "capacitor://localhost",
    "https://localhost"
