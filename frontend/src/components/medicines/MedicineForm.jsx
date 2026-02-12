@@ -144,6 +144,7 @@ const MedicineForm = ({ medicine, onCancel, onSuccess }) => {
   const [formData, setFormData] = useState({
     name: '',
     dose: '',
+    condition: '',
     times: [''],
     startDate: '',
     endDate: '',
@@ -162,6 +163,7 @@ const MedicineForm = ({ medicine, onCancel, onSuccess }) => {
         name: medicine.name,
         dose: medicine.dose,
         times: medicine.times,
+        condition: medicine.condition || '',   // 👈 Load existing
         startDate,
         endDate,
         notes: medicine.notes || '',
@@ -221,6 +223,7 @@ const MedicineForm = ({ medicine, onCancel, onSuccess }) => {
         startDate: formData.startDate,
         endDate: formData.endDate,
       },
+      condition: formData.condition.trim(), // 👈 Send to backend
       notes: formData.notes.trim(),
     };
 
@@ -288,6 +291,26 @@ const MedicineForm = ({ medicine, onCancel, onSuccess }) => {
                         onSelect={() => {}} 
                     />
                 </div>
+
+                {/* 👇 2. NEW CONDITION INPUT (Add this between Name and Dose) */}
+      <div className="border-t border-slate-50 pt-3">
+          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">
+              Treats Condition <span className="text-[10px] text-slate-300 normal-case">(Optional)</span>
+          </label>
+          <input
+              type="text"
+              name="condition"
+              value={formData.condition}
+              onChange={handleChange}
+              className="w-full text-sm font-bold text-slate-700 placeholder-slate-300 outline-none bg-slate-50 p-3 rounded-xl"
+              placeholder="e.g. Hypertension, Diabetes, Pain"
+          />
+          <p className="text-[10px] text-blue-400 mt-1 pl-1">
+              * Helps AI predict risks if you miss doses.
+          </p>
+      </div>
+
+      
                 <div className="border-t border-slate-50 pt-3">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Dosage</label>
                     <input

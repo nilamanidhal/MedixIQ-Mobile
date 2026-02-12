@@ -23,6 +23,7 @@
     "@capacitor/local-notifications": "^7.0.3",
     "@capacitor/network": "^7.0.2",
     "@capacitor/share": "^7.0.3",
+    "@google/genai": "^1.39.0",
     "axios": "^1.11.0",
     "capacitor-native-settings": "^7.0.2",
     "groq-sdk": "^0.37.0",
