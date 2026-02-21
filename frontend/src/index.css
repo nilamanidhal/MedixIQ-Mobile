@@ -1,6 +1,4 @@
   @import "tailwindcss";
-  @tailwind base;
-@tailwind components;
 @tailwind utilities;
 
 ::-webkit-scrollbar {
@@ -32,6 +30,11 @@
   --bg-color: #f8fafc;
 }
 
+html {
+    /* 👇 PREVENTS DOUBLE-TAP ZOOM */
+    touch-action: manipulation; 
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -45,6 +48,12 @@ body {
   width: 100vw;
   height: 100vh;
   overflow: hidden; /* Important! We scroll inside the layout, not the body */
+}
+
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+  /* Prevent iOS zoom on focus by ensuring font size is large enough (16px) or handled by meta tag */
 }
 
 /* The app shell */
