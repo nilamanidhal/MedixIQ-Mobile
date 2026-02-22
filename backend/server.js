@@ -11,6 +11,7 @@ const { startCronJobs } = require('./services/cronService');
 const adminRoutes = require('./routes/admin');
 const contactRoutes=require('./routes/contact');
 const reportRoutes=require('./routes/reports')
+const emergencyRoutes = require('./routes/emergency');
 
 dotenv.config();
 console.log("ENV LOADED:", process.env.VAPID_SUBJECT);
@@ -34,6 +35,7 @@ app.use(cors({
 app.use(express.json());
 
 // Routes
+app.use('/', emergencyRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/medicines', medicineRoutes);
 app.use('/api/notifications', notificationRoutes);
