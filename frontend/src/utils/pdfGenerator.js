@@ -141,3 +141,118 @@ export const generateDoctorReport = async (user, medicines, logs, days, action) 
     throw error;
   }
 };
+
+
+/**
+ * Generates Emergency Wallet Card PDF (Credit Card Size)
+ * @param {Object} profileData - Emergency Profile Data
+ * @param {String} token - Emergency Token
+ */
+export const generateWalletCardPDF = async (profileData, token) => {
+    // Standard credit card size: 85.6mm x 53.98mm (Landscape)
+    const doc = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: [85.6, 53.98]
+    });
+
+    // 1. Background & Header
+    doc.setFillColor(220, 38, 38); // Red header
+    doc.rect(0, 0, 85.6, 12, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("EMERGENCY MEDICAL ID", 42.8, 8, { align: "center" });
+
+    // 2. Patient Data (Left Side)
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text(profileData?.name?.toUpperCase() || "UNKNOWN", 5, 20);
+    
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Blood Group: `, 5, 26);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(220, 38, 38); // Red for blood group
+    doc.text(profileData?.bloodGroup || "N/A", 25, 26);
+
+    doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "normal");
+    if (profileData?.allergies?.length > 0) {
+        doc.text(`Allergies: ${profileData.allergies.join(', ').substring(0, 25)}`, 5, 32);
+    }
+
+    // Emergency Contact
+    if (profileData?.emergencyContacts?.length > 0) {
+        const ec = profileData.emergencyContacts[0];
+        doc.setFont("helvetica", "bold");
+        doc.text(`ICE: ${ec.phone}`, 5, 42);
+        doc.setFont("helvetica", "normal");
+        doc.text(`(${ec.name})`, 5, 46);
+    }
+
+    // 3. QR Code (Right Side)
+    // Grab the QR code from the DOM canvas (rendered by react-qr-code)
+    const qrSvg = document.getElementById("emergency-qr-code");
+    if (qrSvg) {
+        try {
+            const svgData = new XMLSerializer().serializeToString(qrSvg);
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            const img = new Image();
+            
+            await new Promise((resolve, reject) => {
+                img.onload = () => {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.fillStyle = "white"; 
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    
+                    const pngUrl = canvas.toDataURL("image/png");
+                    doc.addImage(pngUrl, 'PNG', 55, 15, 28, 28);
+                    resolve();
+                };
+                img.onerror = reject;
+                img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+            });
+        } catch (e) {
+            console.error("Failed to render QR to PDF", e);
+        }
+    }
+
+    // Footer Text
+    doc.setFontSize(6);
+    doc.setTextColor(100, 100, 100);
+    doc.text("Scan QR code for full medical profile & active medications.", 42.8, 50, { align: "center" });
+
+    // Save or Share via Capacitor Filesystem (matching your existing logic)
+    try {
+        const base64Data = doc.output('datauristring').split(',')[1];
+        const safeName = (profileData?.name || 'Patient').replace(/[^a-z0-9]/gi, '_');
+        const fileName = `Emergency_Card_${safeName}.pdf`;
+
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+             // Share directly on mobile
+             const result = await Filesystem.writeFile({
+                path: fileName,
+                data: base64Data,
+                directory: Directory.Cache
+            });
+            await Share.share({
+                title: 'Emergency Medical Card',
+                text: 'Print this card and keep it in your wallet.',
+                url: result.uri,
+                dialogTitle: 'Save Wallet Card'
+            });
+        } else {
+            // Web Download
+            doc.save(fileName);
+        }
+    } catch (error) {
+        console.error("PDF Save Error:", error);
+        doc.save(`Emergency_Card.pdf`); // Fallback web download
+    }
+};

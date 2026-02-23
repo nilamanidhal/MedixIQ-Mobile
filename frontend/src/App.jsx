@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { App as CapacitorApp } from '@capacitor/app';
+import axios from 'axios';
 
 // Layout & Components
 import MobileLayout from './components/MobileLayout';
@@ -17,7 +18,10 @@ import HealthTracking from './components/pages/HealthTraking';
 import ContactPage from './components/pages/ContactPage';
 import MorePage from './components/pages/MorePage';
 import MedicalRecords from './components/pages/MedicalRecords';
-
+import PublicEmergencyPage from './components/pages/PublicEmergencyPage';
+import EmergencySetupPage from './components/pages/EmergencySetupPage';
+import EmergencyOverlay from './components/EmergencyOverlay';
+import { SentinelProvider } from './contexts/SentinelContext';
 
 // 🟢 1. Create a Helper Component to Handle Back Button
 const BackButtonHandler = () => {
@@ -90,12 +94,16 @@ const PublicRoute = ({ children }) => {
 function App() {
   return (
     <AuthProvider>
+      <SentinelProvider>
       <BrowserRouter>
 
       {/* ✅ PLACE IT HERE: Inside Router, Outside Routes */}
         <BackButtonHandler />
 
         <Routes>
+
+          {/* 🔥 PUBLIC EMERGENCY ROUTE (NO AUTH WHATSOEVER) */}
+          <Route path="/emergency/:token" element={<PublicEmergencyPage />} />
           
           {/* 🔥 WRAP LOGIN IN PUBLIC ROUTE */}
           <Route 
@@ -124,6 +132,8 @@ function App() {
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/medical-records" element={<MedicalRecords />} />
             <Route path="/more" element={<MorePage />} />
+            {/* 🔥 NEW PROTECTED ROUTE FOR EMERGENCY SETUP */}
+            <Route path="/emergency-setup" element={<EmergencySetupPage />} />
           </Route>
 
           {/* Catch-all */}
@@ -131,6 +141,7 @@ function App() {
 
         </Routes>
       </BrowserRouter>
+      </SentinelProvider>
     </AuthProvider>
   );
 }
