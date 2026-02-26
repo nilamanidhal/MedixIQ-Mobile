@@ -121,33 +121,37 @@ if (Capacitor.isNativePlatform() && SentinelNative && SentinelNative.showMedical
         triggerEmergencyProtocol();
     };
 
-    const executeSmsDispatch = async (profileData) => {
+const executeSmsDispatch = async (profileData) => {
         setAccidentDetected(false); // Hide overlay
         
         try {
-            // 1. Show Lock Screen Notification
             if (profileData) showLockScreenInfo(profileData);
 
-            // 2. Send SMS
             const loc = await getLastKnownLocation();
-            
-            // Fixed standard Google Maps link format
             const mapLink = loc ? `https://www.google.com/maps?q=${loc.lat},${loc.lng}` : "Location unknown";
             
             const contactPhone = profileData?.emergencyContacts?.[0]?.phone;
-            if (!contactPhone) return alert("No emergency contact set!");
+            if (!contactPhone) return alert("No emergency contact set in your profile!");
 
-            const message = `🚨 EMERGENCY - MedixIQ Alert\n${profileData?.name} may be in an accident.\nLocation: ${mapLink}\nBlood: ${profileData?.bloodGroup || 'N/A'}\nMed Info: https://medmind-heathcare.netlify.app/emergency/${profileData?.token}`;
+            // 🔥 FIX: Format a direct-data SMS instead of sending a link
+            const publicMeds = profileData?.medicines?.filter(m => m.isPublic).map(m => m.name).join(', ') || 'None';
+            const allergies = profileData?.allergies?.join(', ') || 'None';
+
+            const message = `🚨 EMERGENCY - MedixIQ Alert
+${profileData?.name || 'Unknown User'} may be in an accident.
+Location: ${mapLink}
+Blood: ${profileData?.bloodGroup || 'Unknown'}
+Allergies: ${allergies}
+Meds: ${publicMeds}`;
 
             // 📱 CALL OUR NATIVE ANDROID SMS PLUGIN
-         if (Capacitor.isNativePlatform() && SentinelNative && SentinelNative.sendEmergencySms) {
+            if (Capacitor.isNativePlatform() && SentinelNative && SentinelNative.sendEmergencySms) {
                 await SentinelNative.sendEmergencySms({
                     phone: contactPhone,
                     message: message
                 });
                 alert("Emergency SMS Dispatched Successfully.");
             } else {
-                // 👇 Fallback for testing in the browser
                 console.log("SIMULATED SMS SENT:", message);
                 alert("Web Mode: SMS Simulation logged to console.");
             }
@@ -156,6 +160,42 @@ if (Capacitor.isNativePlatform() && SentinelNative && SentinelNative.showMedical
             alert("Failed to send emergency SMS.");
         }
     };
+
+    // const executeSmsDispatch = async (profileData) => {
+    //     setAccidentDetected(false); // Hide overlay
+        
+    //     try {
+    //         // 1. Show Lock Screen Notification
+    //         if (profileData) showLockScreenInfo(profileData);
+
+    //         // 2. Send SMS
+    //         const loc = await getLastKnownLocation();
+            
+    //         // Fixed standard Google Maps link format
+    //         const mapLink = loc ? `https://www.google.com/maps?q=${loc.lat},${loc.lng}` : "Location unknown";
+            
+    //         const contactPhone = profileData?.emergencyContacts?.[0]?.phone;
+    //         if (!contactPhone) return alert("No emergency contact set!");
+
+    //         const message = `🚨 EMERGENCY - MedixIQ Alert\n${profileData?.name} may be in an accident.\nLocation: ${mapLink}\nBlood: ${profileData?.bloodGroup || 'N/A'}\nMed Info: https://medmind-heathcare.netlify.app/emergency/${profileData?.token}`;
+
+    //         // 📱 CALL OUR NATIVE ANDROID SMS PLUGIN
+    //      if (Capacitor.isNativePlatform() && SentinelNative && SentinelNative.sendEmergencySms) {
+    //             await SentinelNative.sendEmergencySms({
+    //                 phone: contactPhone,
+    //                 message: message
+    //             });
+    //             alert("Emergency SMS Dispatched Successfully.");
+    //         } else {
+    //             // 👇 Fallback for testing in the browser
+    //             console.log("SIMULATED SMS SENT:", message);
+    //             alert("Web Mode: SMS Simulation logged to console.");
+    //         }
+    //     } catch (error) {
+    //         console.error("SMS Dispatch Failed", error);
+    //         alert("Failed to send emergency SMS.");
+    //     }
+    // };
 
     return {
         isEnabled,

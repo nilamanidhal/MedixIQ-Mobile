@@ -180,6 +180,39 @@ const EmergencySetupPage = () => {
                 </div>
 
                 {/* Add similar blocks for Conditions and Emergency Contacts based on formData structure */}
+                {/* Emergency Contact (Critical for SMS) */}
+                <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
+                    <h3 className="font-bold text-slate-800 mb-4 border-b pb-2 text-red-600">Emergency Contact (SMS Alert)</h3>
+                    <p className="text-xs text-slate-500 mb-3">This number will receive the automatic SMS if you are in an accident.</p>
+                    
+                    {formData.emergencyContacts.map((contact, index) => (
+                        <div key={index} className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                            <input 
+                                type="text" 
+                                placeholder="Contact Name (e.g., Mom, Spouse)" 
+                                value={contact.name} 
+                                onChange={e => {
+                                    const newContacts = [...formData.emergencyContacts];
+                                    newContacts[index].name = e.target.value;
+                                    setFormData({...formData, emergencyContacts: newContacts});
+                                }} 
+                                className="w-full p-3 bg-white rounded-xl border border-slate-200" 
+                            />
+                            <input 
+                                type="tel" 
+                                placeholder="Phone Number (include country code)" 
+                                value={contact.phone} 
+                                onChange={e => {
+                                    const newContacts = [...formData.emergencyContacts];
+                                    newContacts[index].phone = e.target.value;
+                                    setFormData({...formData, emergencyContacts: newContacts});
+                                }} 
+                                className="w-full p-3 bg-white rounded-xl border border-slate-200" 
+                            />
+                        </div>
+                    ))}
+                </div>
+                
                 
                 {/* Medicines Visibility Toggle */}
                 <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
