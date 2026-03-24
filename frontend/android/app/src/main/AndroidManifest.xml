@@ -68,5 +68,15 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
+
+        <activity
+    android:name=".EmergencyAlertActivity"
+    android:exported="false"
+    android:showOnLockScreen="true"
+    android:turnScreenOn="true"
+    android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
+    android:launchMode="singleTop"
+    android:excludeFromRecents="true" />
+    
     </application>
 </manifest>

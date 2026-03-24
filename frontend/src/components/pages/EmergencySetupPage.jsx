@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { useMedicines } from '../../hooks/useMedicines'; // Your existing hook
 import QRCardDisplay from '../QRCardDisplay';
+import { useSentinel } from '../../hooks/useSentinel'; // ← add karo
 import LoadingSpinner from '../LoadingSpinner';
 import { ShieldAlert, Save, ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -11,6 +12,7 @@ const EmergencySetupPage = () => {
     const { token: authToken, API_BASE_URL, user } = useAuth();
     const { medicines } = useMedicines();
     const navigate = useNavigate();
+    const { saveEmergencyDataForNative } = useSentinel(); // ← add karo
     
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -95,37 +97,67 @@ const EmergencySetupPage = () => {
         setFormData({ ...formData, [field]: newArr.length ? newArr : [''] });
     };
 
+
+
     // 3. Save Profile
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            // Clean empty strings from arrays
-            const cleanData = {
-                ...formData,
-                allergies: formData.allergies.filter(a => a.trim() !== ''),
-                conditions: formData.conditions.filter(c => c.trim() !== ''),
-                emergencyContacts: formData.emergencyContacts.filter(c => c.name.trim() !== '' && c.phone.trim() !== '')
-            };
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+        const cleanData = {
+            ...formData,
+            allergies: formData.allergies.filter(a => a.trim() !== ''),
+            conditions: formData.conditions.filter(c => c.trim() !== ''),
+            emergencyContacts: formData.emergencyContacts.filter(
+                c => c.name.trim() !== '' && c.phone.trim() !== ''
+            )
+        };
 
-            const endpoint = profileExists ? '/emergency/update' : '/emergency/setup';
-            const method = profileExists ? 'put' : 'post';
+        const endpoint = profileExists ? '/emergency/update' : '/emergency/setup';
+        const method = profileExists ? 'put' : 'post';
 
-            const res = await axios[method](`${API_BASE_URL}${endpoint}`, { publicData: cleanData }, {
-                headers: { Authorization: `Bearer ${authToken}` }
-            });
+        const res = await axios[method](
+            `${API_BASE_URL}${endpoint}`,
+            { publicData: cleanData },
+            { headers: { Authorization: `Bearer ${authToken}` } }
+        );
 
-            if (!profileExists) {
-                setProfileExists(true);
-                setQrToken(res.data.profile.token);
-            }
-            alert("Emergency Profile Saved!");
-        } catch (err) {
-            alert("Error saving profile.");
-        } finally {
-            setSaving(false);
+        if (!profileExists) {
+            setProfileExists(true);
+            setQrToken(res.data.profile.token);
         }
-    };
 
+        // ✅ Native mein bhi save karo — direct data pass karo
+        await saveEmergencyDataForNative(cleanData);
+
+        // ✅ Preferences mein bhi store karo future ke liye
+        await Preferences.set({
+            key: 'emergency_profile_native',
+            value: JSON.stringify({
+                name: cleanData.name,
+                bloodGroup: cleanData.bloodGroup,
+                allergies: cleanData.allergies.join(', '),
+                meds: cleanData.medicines?.filter(m => m.isPublic)?.map(m => m.name)?.join(', ') || 'None',
+                emergencyPhone: cleanData.emergencyContacts?.[0]?.phone || '',
+            })
+        });
+
+        alert("Emergency Profile Saved!");
+} catch (err) {
+    console.error("Full error:", err);
+    console.error("Response:", err?.response?.data);
+    
+    const msg = err?.response?.data?.message 
+        || err?.response?.data?.error
+        || err?.message
+        || "Unknown error";
+    alert("Error: " + msg);
+} finally {
+        setSaving(false);
+    }
+};
+
+
+    
     if (loading) return <LoadingSpinner text="Loading Profile..." />;
 
     return (
