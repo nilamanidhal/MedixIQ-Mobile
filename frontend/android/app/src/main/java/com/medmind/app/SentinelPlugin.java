@@ -59,31 +59,29 @@ public class SentinelPlugin extends Plugin {
         call.resolve();
     }
 
-    @PluginMethod
-    public void saveEmergencyData(PluginCall call) {
-        String name = call.getString("name", "Unknown");
-        String bloodGroup = call.getString("bloodGroup", "Unknown");
-        String allergies = call.getString("allergies", "None");
-        String meds = call.getString("meds", "None");
-        String emergencyPhone = call.getString("emergencyPhone", "");
+@PluginMethod
+public void saveEmergencyData(PluginCall call) {
+    String name = call.getString("name", "Unknown");
+    String bloodGroup = call.getString("bloodGroup", "Unknown");
+    String allergies = call.getString("allergies", "None");
+    String meds = call.getString("meds", "None");
+    String emergencyPhone = call.getString("emergencyPhone", "");
+    String smsEnabled = call.getString("smsEnabled", "true"); // ✅ NEW
 
-        Log.d("SentinelPlugin", "Saving - Name: " + name + 
-          ", Phone: " + emergencyPhone); // ✅ Debug
+    SharedPreferences prefs = getContext()
+        .getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE);
+    prefs.edit()
+        .putString("emergency_name", name)
+        .putString("emergency_blood", bloodGroup)
+        .putString("emergency_allergies", allergies)
+        .putString("emergency_meds", meds)
+        .putString("emergency_phone", emergencyPhone)
+        .putString("sentinel_sms_enabled", smsEnabled) // ✅ NEW
+        .apply();
 
-        SharedPreferences prefs = getContext()
-            .getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE);
-        prefs.edit()
-            .putString("emergency_name", name)
-            .putString("emergency_blood", bloodGroup)
-            .putString("emergency_allergies", allergies)
-            .putString("emergency_meds", meds)
-            .putString("emergency_phone", emergencyPhone)
-            .apply();
-
-                Log.d("SentinelPlugin", "✅ Emergency data saved to SharedPreferences");
-
-        call.resolve();
-    }
+    Log.d("SentinelPlugin", "✅ Saved: " + name + " | SMS: " + smsEnabled);
+    call.resolve();
+}
 
     @PluginMethod
     public void sendEmergencySms(PluginCall call) {

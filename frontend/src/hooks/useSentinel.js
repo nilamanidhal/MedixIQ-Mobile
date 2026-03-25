@@ -79,14 +79,41 @@ export const useSentinel = () => {
 
 const toggleSentinel = async (state) => {
     if (state && Capacitor.isNativePlatform()) {
-        // ✅ Location permission pehle maango — FGS ke liye zaruri hai
+
+        // ✅ Step 1: Location check
         try {
             const { Geolocation } = await import('@capacitor/geolocation');
-            const perm = await Geolocation.requestPermissions();
-            console.log("Location permission:", perm);
+            const permStatus = await Geolocation.checkPermissions();
+
+            if (permStatus.location !== 'granted') {
+                const result = await Geolocation.requestPermissions();
+                if (result.location !== 'granted') {
+                    alert("⚠️ Location permission required for Sentinel Mode to send accurate GPS in emergency SMS.");
+                    // Still allow sentinel — just no GPS
+                }
+            }
         } catch (e) {
-            console.log("Location perm error:", e);
+            console.log("Location check:", e);
         }
+
+        // ✅ Step 2: Ask SMS preference
+        const wantsSms = window.confirm(
+            "🚨 Sentinel Mode — Emergency SMS\n\n" +
+            "If an accident is detected, do you want to automatically send an emergency SMS to your emergency contact?\n\n" +
+            "OK = Yes, send SMS\n" +
+            "Cancel = No, only show emergency info on this device"
+        );
+
+        await Preferences.set({
+            key: 'sentinel_sms_enabled',
+            value: wantsSms ? 'true' : 'false'
+        });
+
+        // Save to native
+        await SentinelNative.saveEmergencyData({
+            ...await getEmergencyDataFromPrefs(),
+            smsEnabled: wantsSms ? 'true' : 'false'
+        });
     }
 
     setIsEnabled(state);
@@ -101,6 +128,12 @@ const toggleSentinel = async (state) => {
     } else {
         await stopNativeService();
     }
+};
+
+// Helper
+const getEmergencyDataFromPrefs = async () => {
+    const { value } = await Preferences.get({ key: 'emergency_profile_native' });
+    return value ? JSON.parse(value) : {};
 };
 
 

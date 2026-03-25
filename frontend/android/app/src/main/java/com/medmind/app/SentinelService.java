@@ -22,6 +22,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Looper;
+import android.app.AlarmManager;
 
 public class SentinelService extends Service implements SensorEventListener {
 
@@ -120,24 +121,40 @@ private void triggerEmergencyFromService() {
     String allergies = prefs.getString("emergency_allergies", "None");
     String meds = prefs.getString("emergency_meds", "None");
     String phone = prefs.getString("emergency_phone", "");
+    String smsEnabled = prefs.getString("sentinel_sms_enabled", "true");
 
-    Log.d("SentinelService", "🚨 Triggering: " + name + " | " + phone);
+    Log.d("SentinelService", "🚨 Triggering: " + name + " | SMS: " + smsEnabled);
 
-    // 1. Lock screen notification
-    EmergencyInfoHelper.showLockScreenMedicalId(this, name, blood, allergies, meds);
-
-    // 2. Pending accident flag
+    // 1. Pending flag for React
     prefs.edit().putString("pending_accident", "true").apply();
 
-    // 3. GPS + SMS
-    fetchLiveLocationAndSendSms(name, blood, allergies, meds, phone);
-
-    // 4. ✅ PendingIntent se launch karo — background block bypass
+    // 2. Get map link
     String mapLink = getLastKnownMapLink();
-    launchEmergencyAlertViaPendingIntent(name, phone, blood, allergies, meds, mapLink);
 
-    // 5. notifyListeners (app open/background ke liye)
+    // ✅ 3. Send broadcast to EmergencyReceiver
+    // BroadcastReceiver se fullScreenIntent notification → bypasses BAL!
+    Intent broadcastIntent = new Intent(this, EmergencyReceiver.class);
+    broadcastIntent.putExtra("name", name);
+    broadcastIntent.putExtra("phone", phone);
+    broadcastIntent.putExtra("blood", blood);
+    broadcastIntent.putExtra("allergies", allergies);
+    broadcastIntent.putExtra("meds", meds);
+    broadcastIntent.putExtra("mapLink", mapLink);
+    broadcastIntent.putExtra("smsEnabled", smsEnabled);
+    sendBroadcast(broadcastIntent);
+
+    // 4. Lock screen medical ID notification (backup)
+    showLockScreenMedicalId(name, blood, allergies, meds);
+
+    // 5. notifyListeners for React (if app open)
     SentinelPlugin.fireAccidentEvent(pluginInstance);
+
+    // ❌ NO fetchLiveLocationAndSendSms here — SMS sent from EmergencyAlertActivity after 10 sec
+}
+
+private void showLockScreenMedicalId(String name, String blood,
+                                      String allergies, String meds) {
+    EmergencyInfoHelper.showLockScreenMedicalId(this, name, blood, allergies, meds);
 }
 
 private String getLastKnownMapLink() {
@@ -156,52 +173,49 @@ private String getLastKnownMapLink() {
 
 private void launchEmergencyAlertViaPendingIntent(
     String name, String phone, String blood,
-    String allergies, String meds, String mapLink
+    String allergies, String meds, String mapLink, String smsEnabled
 ) {
     try {
         Intent alertIntent = new Intent(this, EmergencyAlertActivity.class);
-        alertIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        alertIntent.addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK |
+            Intent.FLAG_ACTIVITY_CLEAR_TOP |
+            Intent.FLAG_ACTIVITY_SINGLE_TOP
+        );
         alertIntent.putExtra("name", name);
         alertIntent.putExtra("phone", phone);
         alertIntent.putExtra("blood", blood);
         alertIntent.putExtra("allergies", allergies);
         alertIntent.putExtra("meds", meds);
         alertIntent.putExtra("mapLink", mapLink);
+        alertIntent.putExtra("smsEnabled", smsEnabled);
 
-        // ✅ PendingIntent + Notification click → launches Activity (bypasses BAL)
         PendingIntent pendingIntent = PendingIntent.getActivity(
             this, 0, alertIntent,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        // ✅ High priority notification with fullScreenIntent
-        // fullScreenIntent auto-launches on lock screen / background
-        NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-
-        String channelId = "EmergencyAlert";
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                channelId, "Emergency Alert",
-                NotificationManager.IMPORTANCE_HIGH
-            );
-            channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
-            nm.createNotificationChannel(channel);
+        // ✅ AlarmManager — guaranteed launch even from background
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        if (alarmManager != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    System.currentTimeMillis() + 100, // 100ms baad — almost instant
+                    pendingIntent
+                );
+            } else {
+                alarmManager.setExact(
+                    AlarmManager.RTC_WAKEUP,
+                    System.currentTimeMillis() + 100,
+                    pendingIntent
+                );
+            }
+            Log.d("SentinelService", "✅ Emergency alert scheduled via AlarmManager");
         }
 
-        Notification alertNotification = new NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("🚨 ACCIDENT DETECTED!")
-            .setContentText("Tap to cancel — SMS sending in 10 seconds")
-            .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setAutoCancel(true)
-            .setFullScreenIntent(pendingIntent, true) // ✅ This launches on lock screen!
-            .setContentIntent(pendingIntent)
-            .build();
-
-        nm.notify(912, alertNotification);
-        Log.d("SentinelService", "✅ Emergency alert notification launched");
+        // ✅ Also show lock screen notification as backup
+        EmergencyInfoHelper.showLockScreenMedicalId(this, name, blood, allergies, meds);
 
     } catch (Exception e) {
         Log.e("SentinelService", "Alert launch failed: " + e.getMessage());
