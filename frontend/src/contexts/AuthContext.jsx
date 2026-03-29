@@ -69,31 +69,29 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    // 4. LOGIN
+// 4. LOGIN (Fixed)
     const login = async (email, password) => {
-        setLoading(true);
+        // ❌ REMOVED: setLoading(true) - Let the Login component handle its own button loading!
         try {
             const response = await axios.post('/auth/login', { email, password });
             const { token, user } = response.data;
             
-            // Save to Local Storage
             localStorage.setItem('token', token);
             localStorage.setItem('user_data', JSON.stringify(user));
             
-            // Update State
             setToken(token);
             setUser(user);
             return { success: true };
         } catch (error) {
-            return { success: false, message: error.response?.data?.message || 'Network error' };
-        } finally {
-            setLoading(false);
+            // Update error message to warn users about the sleeping server!
+            const msg = error.response?.data?.message || 'Network Error. (If the server was asleep, try again in 30s!)';
+            return { success: false, message: msg };
         }
     };
 
-    // 5. REGISTER
+    // 5. REGISTER (Fixed)
     const register = async (userData) => {
-        setLoading(true);
+        // ❌ REMOVED: setLoading(true)
         try {
             const response = await axios.post('/auth/register', userData);
             const { token, user } = response.data;
@@ -105,9 +103,8 @@ export const AuthProvider = ({ children }) => {
             setUser(user);
             return { success: true };
         } catch (error) {
-            return { success: false, message: error.response?.data?.message || 'Network error' };
-        } finally {
-            setLoading(false);
+            const msg = error.response?.data?.message || 'Network Error. (If the server was asleep, try again in 30s!)';
+            return { success: false, message: msg };
         }
     };
 
@@ -167,112 +164,3 @@ export const AuthProvider = ({ children }) => {
 };
 
 
-
-
-
-
-
-
-
-
-// import React, { createContext, useContext, useState, useEffect } from 'react';
-// import axios from 'axios';
-
-// const AuthContext = createContext();
-
-// export const useAuth = () => {
-//     const context = useContext(AuthContext);
-//     if (!context) {
-//         throw new Error('useAuth must be used within an AuthProvider');
-//     }
-//     return context;
-// };
-
-// export const AuthProvider = ({ children }) => {
-//     const [user, setUser] = useState(null);
-//     const [token, setToken] = useState(localStorage.getItem('token'));
-//     const [loading, setLoading] = useState(true);
-
-//     // Use the environment variable for the API base URL
-//     const API_BASE_URL = import.meta.env.VITE_API_URL;
-//     axios.defaults.baseURL = API_BASE_URL;
-
-//     // This effect runs whenever the token changes and sets the default auth header for all future axios requests
-//     useEffect(() => {
-//         if (token) {
-//             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-//             fetchUserProfile();
-//         } else {
-//             delete axios.defaults.headers.common['Authorization'];
-//             setLoading(false);
-//         }
-//     }, [token]);
-
-//     const fetchUserProfile = async () => {
-//         try {
-//             const response = await axios.get('/auth/profile');
-//             setUser(response.data.user);
-//         } catch (error) {
-//             console.error('Error fetching user profile:', error);
-//             logout(); // If profile fetch fails, the token is likely invalid, so log out
-//         } finally {
-//             setLoading(false);
-//         }
-//     };
-
-//     const login = async (email, password) => {
-//         try {
-//             const response = await axios.post('/auth/login', { email, password });
-//             const { token, user } = response.data;
-//             localStorage.setItem('token', token);
-//             setToken(token);
-//             setUser(user);
-//             return { success: true };
-//         } catch (error) {
-//             return { success: false, message: error.response?.data?.message || 'Network error' };
-//         }
-//     };
-
-//     const register = async (userData) => {
-//         try {
-//             const response = await axios.post('/auth/register', userData);
-//             const { token, user } = response.data;
-//             localStorage.setItem('token', token);
-//             setToken(token);
-//             setUser(user);
-//             return { success: true };
-//         } catch (error) {
-//             return { success: false, message: error.response?.data?.message || 'Network error' };
-//         }
-//     };
-
-//     const logout = () => {
-//         localStorage.removeItem('token');
-//         setToken(null);
-//         setUser(null);
-//     };
-    
-//     const updateProfile = async (profileData) => {
-//         try {
-//             const response = await axios.put('/auth/profile', profileData);
-//             setUser(response.data.user);
-//             return { success: true };
-//         } catch (error) {
-//             return { success: false, message: error.response?.data?.message || 'Network error' };
-//         }
-//     };
-
-
-//     const value = {
-//         user,
-//         token,
-//         loading,
-//         login,
-//         register,
-//         logout,
-//         updateProfile,
-//         API_BASE_URL,
-//     };
-
-//     return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
-// };

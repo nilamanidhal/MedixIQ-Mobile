@@ -22,6 +22,8 @@ import PublicEmergencyPage from './components/pages/PublicEmergencyPage';
 import EmergencySetupPage from './components/pages/EmergencySetupPage';
 import EmergencyOverlay from './components/EmergencyOverlay';
 import { SentinelProvider } from './contexts/SentinelContext';
+import ProfileSettings from './components/pages/ProfileSettings';
+import ChangePassword from './components/pages/ChangePassword';
 
 // 🟢 1. Create a Helper Component to Handle Back Button
 const BackButtonHandler = () => {
@@ -73,7 +75,7 @@ const BackButtonHandler = () => {
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
-  if (loading) return <LoadingSpinner text="Loading..." />;
+  if (loading) return <LoadingSpinner text="Please Wait..." fullScreen={true} />;
   if (!user) return <Navigate to="/login" replace />;
 
   return children;
@@ -85,7 +87,7 @@ const ProtectedRoute = ({ children }) => {
 const PublicRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
-  if (loading) return <LoadingSpinner text="Checking session..." />;
+  if (loading) return <LoadingSpinner text="Checking session..." fullScreen={true} />;
   if (user) return <Navigate to="/dashboard" replace />;
 
   return children;
@@ -115,6 +117,12 @@ function App() {
             } 
           />
 
+           <Route path="/forgot-password" element={
+              <PublicRoute>
+                  <ForgotPassword />
+              </PublicRoute>
+          } />
+
           {/* Protected App Routes */}
           <Route 
             element={
@@ -134,6 +142,8 @@ function App() {
             <Route path="/more" element={<MorePage />} />
             {/* 🔥 NEW PROTECTED ROUTE FOR EMERGENCY SETUP */}
             <Route path="/emergency-setup" element={<EmergencySetupPage />} />
+            <Route path="/profile-settings" element={<ProfileSettings />} />
+            <Route path="/change-password" element={<ChangePassword />} />
           </Route>
 
           {/* Catch-all */}
@@ -147,51 +157,3 @@ function App() {
 }
 
 export default App;
-
-
-
-
-
-
-
-
-
-// import React from 'react';
-// import { AuthProvider, useAuth } from './contexts/AuthContext';
-// import AuthPage from './components/AuthPage';
-// import Dashboard from './components/Dashboard';
-// import Navbar from './components/Navbar';
-// import LoadingSpinner from './components/LoadingSpinner';
-// import AiChatbot from './components/AiChatbot';
-
-// const AppContent = () => {
-//   const { user, loading } = useAuth();
-
-//   if (loading) {
-//     return <LoadingSpinner text="Loading MediMind..." />;
-//   }
-
-//   return (
-//     <div className="min-h-screen bg-gray-50">
-//       {user ? (
-//         <>
-//           <Navbar />
-//           <Dashboard />
-//           <AiChatbot/>
-//         </>
-//       ) : (
-//         <AuthPage />
-//       )}
-//     </div>
-//   );
-// };
-
-// function App() {
-//   return (
-//     <AuthProvider>
-//       <AppContent />
-//     </AuthProvider>
-//   );
-// }
-
-// export default App;
