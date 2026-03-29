@@ -123,7 +123,8 @@ public void saveEmergencyData(PluginCall call) {
             call.getString("name"),
             call.getString("bloodGroup"),
             call.getString("allergies"),
-            call.getString("meds")
+            call.getString("meds"),
+            call.getString("phone")
         );
         call.resolve();
     }

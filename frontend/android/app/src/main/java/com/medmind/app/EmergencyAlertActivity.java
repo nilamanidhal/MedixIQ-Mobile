@@ -104,13 +104,22 @@ public class EmergencyAlertActivity extends Activity {
         safeBtn.setBackgroundColor(Color.WHITE);
         safeBtn.setTextColor(Color.parseColor("#B71C1C"));
         safeBtn.setPadding(60, 32, 60, 32);
-        safeBtn.setOnClickListener(v -> {
-            if (countDownTimer != null) countDownTimer.cancel();
-            // Clear pending flag
-            getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
-                .edit().remove("pending_accident").apply();
-            finish();
-        });
+safeBtn.setOnClickListener(v -> {
+    if (countDownTimer != null) countDownTimer.cancel();
+    
+    // ✅ SMS cancel permanently for this trigger
+    getSharedPreferences("CapacitorStorage", MODE_PRIVATE)
+        .edit()
+        .remove("pending_accident")
+        .putString("accident_cancelled", "true")  // ✅ flag
+        .apply();
+    
+    // Cancel the ongoing notification
+    ((android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE))
+        .cancel(912);
+    
+    finish();
+});
 
         root.addView(icon);
         root.addView(title);
@@ -135,6 +144,16 @@ public class EmergencyAlertActivity extends Activity {
     }
 
 private void onCountdownFinished() {
+
+    // ✅ Check if cancelled
+    SharedPreferences prefs = getSharedPreferences("CapacitorStorage", MODE_PRIVATE);
+    String cancelled = prefs.getString("accident_cancelled", "false");
+    if ("true".equals(cancelled)) {
+        prefs.edit().remove("accident_cancelled").apply();
+        finish();
+        return;
+    }
+
     try {
         LocationManager lm = (LocationManager) getSystemService(LOCATION_SERVICE);
 
@@ -199,45 +218,75 @@ private void onCountdownFinished() {
         Log.d("EmergencyAlert", "✅ SMS sent after countdown");
     }
 
-    private void showEmergencyInfoScreen(String locationLink) {
-        // ✅ Replace UI with emergency details screen
-        ScrollView scrollView = new ScrollView(this);
-        scrollView.setBackgroundColor(Color.parseColor("#1A1A2E"));
+   private void showEmergencyInfoScreen(String locationLink) {
+    ScrollView scrollView = new ScrollView(this);
+    scrollView.setBackgroundColor(Color.parseColor("#1A1A2E"));
 
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(48, 80, 48, 80);
-        layout.setGravity(Gravity.CENTER_HORIZONTAL);
+    LinearLayout layout = new LinearLayout(this);
+    layout.setOrientation(LinearLayout.VERTICAL);
+    layout.setPadding(48, 80, 48, 80);
+    layout.setGravity(Gravity.CENTER_HORIZONTAL);
 
-        addInfoRow(layout, "🚨 EMERGENCY SENT", "", true, "#FF5252");
-        addInfoRow(layout, "Name", name, false, "#FFFFFF");
-        addInfoRow(layout, "Blood Type", blood, false, "#FF5252");
-        addInfoRow(layout, "Allergies", allergies, false, "#FF9800");
-        addInfoRow(layout, "Medications", meds, false, "#FFFFFF");
-        addInfoRow(layout, "Location", locationLink, false, "#64B5F6");
+    addInfoRow(layout, "🚨 EMERGENCY DETAILS", "", true, "#FF5252");
+    addInfoRow(layout, "Name", name != null ? name : "Unknown", false, "#FFFFFF");
+    addInfoRow(layout, "Blood Type", blood != null ? blood : "Unknown", false, "#FF5252");
+    addInfoRow(layout, "Allergies", allergies != null ? allergies : "None", false, "#FF9800");
+    addInfoRow(layout, "Medications", meds != null ? meds : "None", false, "#FFFFFF");
+    addInfoRow(layout, "📍 Location", locationLink, false, "#64B5F6");
 
-        if (phone != null && !phone.isEmpty()) {
-            addInfoRow(layout, "Emergency Contact", phone, false, "#69F0AE");
-        }
-
-        // Close button
-        Button closeBtn = new Button(this);
-        closeBtn.setText("CLOSE");
-        closeBtn.setTextColor(Color.WHITE);
-        closeBtn.setBackgroundColor(Color.parseColor("#333355"));
-        closeBtn.setPadding(40, 24, 40, 24);
-        closeBtn.setOnClickListener(v -> finish());
+    // ✅ FIX 4 — Emergency contact number add karo
+    if (phone != null && !phone.isEmpty()) {
+        addInfoRow(layout, "🆘 Emergency Contact", phone, false, "#69F0AE");
+        
+        // ✅ Call button bhi add karo
+        Button callBtn = new Button(this);
+        callBtn.setText("📞  CALL EMERGENCY CONTACT");
+        callBtn.setTextColor(Color.WHITE);
+        callBtn.setBackgroundColor(Color.parseColor("#1B5E20"));
+        callBtn.setTextSize(16);
+        callBtn.setPadding(40, 24, 40, 24);
+        callBtn.setOnClickListener(v -> {
+            try {
+                Intent callIntent = new Intent(Intent.ACTION_DIAL);
+                callIntent.setData(android.net.Uri.parse("tel:" + phone));
+                callIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(callIntent);
+            } catch (Exception e) {
+                Log.e("EmergencyAlert", "Call failed", e);
+            }
+        });
 
         LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT
         );
-        btnParams.topMargin = 48;
-        layout.addView(closeBtn, btnParams);
-
-        scrollView.addView(layout);
-        setContentView(scrollView);
+        btnParams.topMargin = 16;
+        btnParams.bottomMargin = 16;
+        layout.addView(callBtn, btnParams);
     }
+
+    // Close button
+    Button closeBtn = new Button(this);
+    closeBtn.setText("CLOSE");
+    closeBtn.setTextColor(Color.WHITE);
+    closeBtn.setBackgroundColor(Color.parseColor("#333355"));
+    closeBtn.setPadding(40, 24, 40, 24);
+    closeBtn.setOnClickListener(v -> {
+        ((android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE))
+            .cancel(912); // Clear notification bhi
+        finish();
+    });
+
+    LinearLayout.LayoutParams closeBtnParams = new LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
+    );
+    closeBtnParams.topMargin = 32;
+    layout.addView(closeBtn, closeBtnParams);
+
+    scrollView.addView(layout);
+    setContentView(scrollView);
+}
 
     private void addInfoRow(LinearLayout parent, String label, String value,
                              boolean isHeader, String valueColor) {

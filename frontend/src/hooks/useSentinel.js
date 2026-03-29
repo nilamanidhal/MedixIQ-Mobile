@@ -8,52 +8,56 @@ export const useSentinel = () => {
     const [isEnabled, setIsEnabled] = useState(false);
     const [accidentDetected, setAccidentDetected] = useState(false);
 
-   useEffect(() => {
-    const loadState = async () => {
-        const { value } = await Preferences.get({ key: 'sentinel_enabled' });
-        if (value === 'true') {
-            setIsEnabled(true);
-            await startNativeService();
-        }
+    useEffect(() => {
+        const loadState = async () => {
+            const { value } = await Preferences.get({ key: 'sentinel_enabled' });
+            if (value === 'true') {
+                setIsEnabled(true);
+                await startNativeService();
+            }
 
-        // ✅ App open hone pe check karo — kya accident hua tha jab app band tha?
-        const { value: pendingAccident } = await Preferences.get({
-            key: 'pending_accident'
-        });
-        if (pendingAccident === 'true') {
-            console.log("🚨 Pending accident found on app open!");
-            setAccidentDetected(true);
-            // Clear the flag
-            await Preferences.remove({ key: 'pending_accident' });
-        }
-    };
-    loadState();
+            const { value: pendingAccident } = await Preferences.get({ key: 'pending_accident' });
+            const { value: accidentTime } = await Preferences.get({ key: 'accident_timestamp' });
 
-    // ✅ Capacitor notifyListeners — app open/background ke liye
-    let listener;
-    const setupListener = async () => {
-        try {
-            listener = await SentinelNative.addListener('ACCIDENT_FIRED', async () => {
-                console.log("🚨 Accident event from native!");
-                setAccidentDetected(true);
-                // Clear pending flag
+            if (pendingAccident === 'true') {
+                const now = Date.now();
+                const timestamp = accidentTime ? parseInt(accidentTime) : 0;
+                const ageSeconds = (now - timestamp) / 1000;
+                console.log("Pending accident age:", ageSeconds, "seconds");
+
+                if (ageSeconds < 30) {
+                    setAccidentDetected(true);
+                } else {
+                    console.log("⏭️ Stale accident ignored");
+                }
                 await Preferences.remove({ key: 'pending_accident' });
-            });
-        } catch (e) {
-            console.error("Listener setup failed:", e);
-        }
-    };
-    setupListener();
+                await Preferences.remove({ key: 'accident_timestamp' });
+            }
+        };
+        loadState();
 
-    // ✅ Window event fallback
-    const onWindowAccident = () => setAccidentDetected(true);
-    window.addEventListener('SENTINEL_ACCIDENT', onWindowAccident);
+        let listener;
+        const setupListener = async () => {
+            try {
+                listener = await SentinelNative.addListener('ACCIDENT_FIRED', async () => {
+                    console.log("🚨 Accident event from native!");
+                    setAccidentDetected(true);
+                    await Preferences.remove({ key: 'pending_accident' });
+                });
+            } catch (e) {
+                console.error("Listener setup failed:", e);
+            }
+        };
+        setupListener();
 
-    return () => {
-        if (listener) listener.remove();
-        window.removeEventListener('SENTINEL_ACCIDENT', onWindowAccident);
-    };
-}, []);
+        const onWindowAccident = () => setAccidentDetected(true);
+        window.addEventListener('SENTINEL_ACCIDENT', onWindowAccident);
+
+        return () => {
+            if (listener) listener.remove();
+            window.removeEventListener('SENTINEL_ACCIDENT', onWindowAccident);
+        };
+    }, []);
 
     const startNativeService = async () => {
         try {
@@ -76,154 +80,141 @@ export const useSentinel = () => {
         }
     };
 
-
-const toggleSentinel = async (state) => {
-    if (state && Capacitor.isNativePlatform()) {
-
-        // ✅ Step 1: Location check
+    // ✅ Helper — emergency data Preferences se padho
+    const getEmergencyDataFromPrefs = async () => {
         try {
-            const { Geolocation } = await import('@capacitor/geolocation');
-            const permStatus = await Geolocation.checkPermissions();
-
-            if (permStatus.location !== 'granted') {
-                const result = await Geolocation.requestPermissions();
-                if (result.location !== 'granted') {
-                    alert("⚠️ Location permission required for Sentinel Mode to send accurate GPS in emergency SMS.");
-                    // Still allow sentinel — just no GPS
-                }
+            const { value } = await Preferences.get({ key: 'emergency_profile_native' });
+            if (value) {
+                const parsed = JSON.parse(value);
+                console.log("getEmergencyDataFromPrefs:", JSON.stringify(parsed));
+                return parsed;
             }
         } catch (e) {
-            console.log("Location check:", e);
+            console.error("getEmergencyDataFromPrefs error:", e);
         }
+        return {};
+    };
 
-        // ✅ Step 2: Ask SMS preference
-        const wantsSms = window.confirm(
-            "🚨 Sentinel Mode — Emergency SMS\n\n" +
-            "If an accident is detected, do you want to automatically send an emergency SMS to your emergency contact?\n\n" +
-            "OK = Yes, send SMS\n" +
-            "Cancel = No, only show emergency info on this device"
-        );
+    // ✅ FIXED saveEmergencyDataForNative — data properly build karo
+    const saveEmergencyDataForNative = async (directData = null) => {
+        try {
+            const { value: smsVal } = await Preferences.get({ key: 'sentinel_sms_enabled' });
+            const smsEnabled = smsVal || 'true';
 
-        await Preferences.set({
-            key: 'sentinel_sms_enabled',
-            value: wantsSms ? 'true' : 'false'
-        });
+            let data;
 
-        // Save to native
-        await SentinelNative.saveEmergencyData({
-            ...await getEmergencyDataFromPrefs(),
-            smsEnabled: wantsSms ? 'true' : 'false'
-        });
-    }
-
-    setIsEnabled(state);
-    await Preferences.set({
-        key: 'sentinel_enabled',
-        value: state ? 'true' : 'false'
-    });
-
-    if (state) {
-        await saveEmergencyDataForNative();
-        await startNativeService();
-    } else {
-        await stopNativeService();
-    }
-};
-
-// Helper
-const getEmergencyDataFromPrefs = async () => {
-    const { value } = await Preferences.get({ key: 'emergency_profile_native' });
-    return value ? JSON.parse(value) : {};
-};
-
-
-const saveEmergencyDataForNative = async (directData = null) => {
-    try {
-        let data;
-
-        if (directData) {
-            // Direct data from EmergencySetupPage
-            data = {
-                name: directData?.name || 'Unknown',
-                bloodGroup: directData?.bloodGroup || 'Unknown',
-                allergies: Array.isArray(directData?.allergies)
-                    ? directData.allergies.filter(a => a).join(', ')
-                    : directData?.allergies || 'None',
-                meds: directData?.medicines
-                    ?.filter(m => m.isPublic)
-                    ?.map(m => m.name)
-                    ?.join(', ') || 'None',
-                emergencyPhone: directData?.emergencyContacts?.[0]?.phone || '',
-            };
-        } else {
-            // ✅ BOTH keys try karo
-            const { value: nativeVal } = await Preferences.get({ 
-                key: 'emergency_profile_native' 
-            });
-            const { value: profileVal } = await Preferences.get({ 
-                key: 'emergency_profile' 
-            });
-
-            const rawVal = nativeVal || profileVal;
-
-            if (!rawVal) {
-                console.warn("⚠️ No emergency profile found!");
-                return;
-            }
-
-            const parsed = JSON.parse(rawVal);
-            console.log("Raw parsed data:", JSON.stringify(parsed));
-
-            // ✅ Handle both data structures
-            if (parsed.publicData) {
-                // emergency_profile structure
-                const pd = parsed.publicData;
+            if (directData) {
+                // Direct data from EmergencySetupPage
                 data = {
-                    name: pd?.name || 'Unknown',
-                    bloodGroup: pd?.bloodGroup || 'Unknown',
-                    allergies: Array.isArray(pd?.allergies)
-                        ? pd.allergies.filter(a => a).join(', ')
-                        : pd?.allergies || 'None',
-                    meds: pd?.medicines
+                    name: directData?.name || 'Unknown',
+                    bloodGroup: directData?.bloodGroup || 'Unknown',
+                    allergies: Array.isArray(directData?.allergies)
+                        ? directData.allergies.filter(a => a).join(', ')
+                        : directData?.allergies || 'None',
+                    meds: directData?.medicines
                         ?.filter(m => m.isPublic)
                         ?.map(m => m.name)
                         ?.join(', ') || 'None',
-                    emergencyPhone: pd?.emergencyContacts?.[0]?.phone || '',
+                    emergencyPhone: directData?.emergencyContacts?.[0]?.phone || '',
+                    smsEnabled: smsEnabled
                 };
             } else {
-                // emergency_profile_native structure (already flat)
+                // Preferences se padho
+                const existing = await getEmergencyDataFromPrefs();
+
+                // ✅ Check karo data valid hai ya nahi
+                if (!existing || !existing.name || existing.name === 'Unknown') {
+                    console.warn("⚠️ No valid emergency profile in Preferences");
+                    return;
+                }
+
                 data = {
-                    name: parsed?.name || 'Unknown',
-                    bloodGroup: parsed?.bloodGroup || 'Unknown',
-                    allergies: parsed?.allergies || 'None',
-                    meds: parsed?.meds || 'None',
-                    emergencyPhone: parsed?.emergencyPhone || '',
+                    name: existing.name || 'Unknown',
+                    bloodGroup: existing.bloodGroup || 'Unknown',
+                    allergies: existing.allergies || 'None',
+                    meds: existing.meds || 'None',
+                    emergencyPhone: existing.emergencyPhone || '',
+                    smsEnabled: smsEnabled
                 };
             }
+
+            console.log("Saving to native:", JSON.stringify(data));
+
+            // ✅ Preferences mein bhi update karo with smsEnabled
+            await Preferences.set({
+                key: 'emergency_profile_native',
+                value: JSON.stringify(data)
+            });
+
+            if (Capacitor.isNativePlatform() && SentinelNative?.saveEmergencyData) {
+                await SentinelNative.saveEmergencyData(data);
+                console.log("✅ Saved to native SharedPreferences");
+            }
+        } catch (e) {
+            console.error("saveEmergencyDataForNative failed:", e);
+        }
+    };
+
+    const toggleSentinel = async (state) => {
+        if (state && Capacitor.isNativePlatform()) {
+
+            // ✅ Fix 1: GPS check — sirf permission check karo, timeout pe block mat karo
+            try {
+                const { Geolocation } = await import('@capacitor/geolocation');
+                const permStatus = await Geolocation.checkPermissions();
+
+                if (permStatus.location !== 'granted') {
+                    const result = await Geolocation.requestPermissions();
+                    if (result.location !== 'granted') {
+                        alert(
+                            "⚠️ Location Permission Required\n\n" +
+                            "Sentinel Mode needs location to send GPS in emergency SMS.\n\n" +
+                            "Please enable from Settings → App Permissions → Location."
+                        );
+                        return; // Block karo
+                    }
+                }
+
+                // ✅ Permission granted — GPS on hai ya nahi sirf warn karo, block mat karo
+                // (timeout error pe confirm nahi dikhana — sirf log karo)
+                console.log("✅ Location permission granted");
+
+            } catch (e) {
+                console.log("Location check error:", e);
+                // Error pe bhi continue karo
+            }
+
+            // ✅ SMS preference
+            const wantsSms = window.confirm(
+                "🚨 Emergency SMS Setting\n\n" +
+                "If accident detected, automatically send SMS to emergency contact?\n\n" +
+                "OK = Yes  |  Cancel = No, only show alert on device"
+            );
+
+            await Preferences.set({
+                key: 'sentinel_sms_enabled',
+                value: wantsSms ? 'true' : 'false'
+            });
+
+            console.log("SMS enabled:", wantsSms);
         }
 
-        console.log("Final data to native:", JSON.stringify(data));
-
-        // ✅ Save correct data to both keys
+        setIsEnabled(state);
         await Preferences.set({
-            key: 'emergency_profile_native',
-            value: JSON.stringify(data)
+            key: 'sentinel_enabled',
+            value: state ? 'true' : 'false'
         });
 
-        if (Capacitor.isNativePlatform() && SentinelNative?.saveEmergencyData) {
-            await SentinelNative.saveEmergencyData(data);
-            console.log("✅ Correct data saved to native SharedPreferences");
+        if (state) {
+            await saveEmergencyDataForNative(); // ✅ Ye sahi data bhejega
+            await startNativeService();
+        } else {
+            await stopNativeService();
         }
-    } catch (e) {
-        console.error("saveEmergencyDataForNative failed:", e);
-    }
-};
-
+    };
 
     const cancelEmergency = () => setAccidentDetected(false);
 
-    // JS executeSmsDispatch is now ONLY for manual/web fallback
-    // Real emergency SMS is sent by Java directly (Fix 2)
     const executeSmsDispatch = async (profileData) => {
         setAccidentDetected(false);
         try {
@@ -240,32 +231,18 @@ const saveEmergencyDataForNative = async (directData = null) => {
                 ?.filter(m => m.isPublic).map(m => m.name).join(', ') || 'None';
             const allergies = profileData?.allergies?.join(', ') || 'None';
 
-            const message = `🚨 EMERGENCY - MedixIQ Alert
-${profileData?.name || 'Unknown'} may be in an accident.
-Location: ${mapLink}
-Blood: ${profileData?.bloodGroup || 'Unknown'}
-Allergies: ${allergies}
-Meds: ${publicMeds}`;
+            const message = `🚨 EMERGENCY - MedixIQ Alert\n${profileData?.name || 'Unknown'} may be in an accident.\nLocation: ${mapLink}\nBlood: ${profileData?.bloodGroup || 'Unknown'}\nAllergies: ${allergies}\nMeds: ${publicMeds}`;
 
             if (Capacitor.isNativePlatform() && SentinelNative?.sendEmergencySms) {
-                await SentinelNative.sendEmergencySms({
-                    phone: contactPhone,
-                    message
-                });
+                await SentinelNative.sendEmergencySms({ phone: contactPhone, message });
                 alert("Emergency SMS Dispatched!");
-            } else {
-                console.log("SIMULATED SMS:", message);
-                alert("Web Mode: SMS logged to console.");
             }
         } catch (error) {
             console.error("SMS Dispatch Failed", error);
         }
     };
 
-    const simulateAccident = () => {
-        // ✅ Simulate via notifyListeners path too
-        setAccidentDetected(true);
-    };
+    const simulateAccident = () => setAccidentDetected(true);
 
     return {
         isEnabled,
@@ -277,253 +254,3 @@ Meds: ${publicMeds}`;
         saveEmergencyDataForNative
     };
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import { Capacitor, registerPlugin } from '@capacitor/core';
-// import { useState, useEffect, useRef } from 'react';
-// import { Motion } from '@capacitor/motion';
-// import { Preferences } from '@capacitor/preferences';
-// import { Geolocation } from '@capacitor/geolocation';
-// import { AccidentDetector } from '../utils/accidentDetector';
-// import { cacheCurrentLocation, getLastKnownLocation } from '../utils/locationCache';
-
-// // Load our custom native Android plugin
-// const SentinelNative = registerPlugin('Sentinel');
-
-// export const useSentinel = () => {
-//     const [isEnabled, setIsEnabled] = useState(false);
-//     const [accidentDetected, setAccidentDetected] = useState(false);
-//     const detector = useRef(new AccidentDetector());
-//     const locationTimer = useRef(null);
-
-//     // Load initial state
-//     useEffect(() => {
-//         const loadState = async () => {
-//             const { value } = await Preferences.get({ key: 'sentinel_enabled' });
-//             if (value === 'true') {
-//                 setIsEnabled(true);
-//                 startMonitoring();
-//             }
-//         };
-//         loadState();
-
-//         // Cleanup on unmount
-//         return () => stopMonitoring();
-//     }, []);
-
-// const toggleSentinel = async (state) => {
-//         if (state) {
-//             if (Capacitor.isNativePlatform()) {
-//                 try {
-//                     // Check both fine and coarse location just in case
-//                     const perm = await Geolocation.checkPermissions();
-//                     if (perm.location !== 'granted' && perm.coarseLocation !== 'granted') {
-//                         const req = await Geolocation.requestPermissions();
-//                         if (req.location !== 'granted' && req.coarseLocation !== 'granted') {
-//                             // 🟢 FIX: Just warn the user, but DO NOT block the toggle anymore!
-//                             alert("⚠️ Location permission seems restricted. Sentinel will still start, but SOS messages might not have your exact GPS coordinates.");
-//                         }
-//                     }
-//                 } catch (e) {
-//                     console.log("Permission check skipped or failed", e);
-//                 }
-//             }
-//         }
-
-//         // Proceed to turn it on regardless of the plugin's confusion
-//         setIsEnabled(state);
-//         await Preferences.set({ key: 'sentinel_enabled', value: state ? 'true' : 'false' });
-        
-//         if (state) {
-//             startMonitoring();
-//         } else {
-//             stopMonitoring();
-//         }
-//     };
-
-//     const startMonitoring = async () => {
-//         try {
-//             // 1. Start Android Foreground Service (keeps app alive)
-//            if (Capacitor.isNativePlatform() && SentinelNative && SentinelNative.startService) {
-//                 await SentinelNative.startService();
-//             }
-
-//             // 2. Start GPS Caching (Every 5 minutes)
-//             cacheCurrentLocation(); // Immediate first cache
-//             locationTimer.current = setInterval(() => {
-//                 cacheCurrentLocation();
-//             }, 5 * 60 * 1000);
-
-//             // 3. Start Accelerometer Listener
-//             await Motion.addListener('accel', (event) => {
-//                 // Pass data to our physics algorithm
-//                 const isAccident = detector.current.processReading(event);
-                
-//                 if (isAccident) {
-//                     triggerEmergencyProtocol();
-//                 }
-//             });
-
-//         } catch (e) {
-//             console.error("Sentinel start failed", e);
-//         }
-//     };
-
-//     const stopMonitoring = async () => {
-//         if (locationTimer.current) clearInterval(locationTimer.current);
-//         await Motion.removeAllListeners();
-        
-//         if (Capacitor.isNativePlatform() && SentinelNative && SentinelNative.stopService) {
-//             await SentinelNative.stopService();
-//         }
-//     };
-
-//    const triggerEmergencyProtocol = async () => {
-//         console.log("Accident triggered! Waking up screen...");
-        
-//         // 🔥 NEW: Force Android to turn the screen on and open the app over the lock screen!
-//         if (Capacitor.isNativePlatform() && SentinelNative && SentinelNative.bringAppToForeground) {
-//             await SentinelNative.bringAppToForeground();
-//         }
-        
-//         setAccidentDetected(true); // This shows the red Overlay UI
-//     };
-
-//     const cancelEmergency = () => {
-//         setAccidentDetected(false);
-//         detector.current = new AccidentDetector(); // Reset algorithm
-//     };
-
-//     // 🔥 NEW: Trigger the Lock Screen Notification
-// //     const showLockScreenInfo = async (profileData) => {
-// // if (Capacitor.isNativePlatform() && SentinelNative && SentinelNative.showMedicalIdNotification && profileData?.token) {            await SentinelNative.showMedicalIdNotification({
-// //                 token: profileData.token,
-// //                 name: profileData.name,
-// //                 bloodGroup: profileData.bloodGroup
-// //             });
-// //         }
-// //     };
-
-
-// const showLockScreenInfo = async (profileData) => {
-//         if (Capacitor.isNativePlatform() && SentinelNative && SentinelNative.showMedicalIdNotification) {
-            
-//             // Format the data just like we did for the SMS
-//             const publicMeds = profileData?.medicines?.filter(m => m.isPublic).map(m => m.name).join(', ') || 'None';
-//             const allergies = profileData?.allergies?.join(', ') || 'None';
-
-//             await SentinelNative.showMedicalIdNotification({
-//                 name: profileData?.name || 'Unknown',
-//                 bloodGroup: profileData?.bloodGroup || 'Unknown',
-//                 allergies: allergies,
-//                 meds: publicMeds
-//             });
-//         }
-//     };
-
-//     // 🔥 NEW: Function to manually test the UI and SMS
-//     const simulateAccident = async () => {
-//         console.log("Simulating accident...");
-//        await triggerEmergencyProtocol();
-//     };
-
-// const executeSmsDispatch = async (profileData) => {
-//         setAccidentDetected(false); // Hide overlay
-        
-//         try {
-//             if (profileData) showLockScreenInfo(profileData);
-
-//             const loc = await getLastKnownLocation();
-//             const mapLink = loc ? `https://www.google.com/maps?q=${loc.lat},${loc.lng}` : "Location unknown";
-            
-//             const contactPhone = profileData?.emergencyContacts?.[0]?.phone;
-//             if (!contactPhone) return alert("No emergency contact set in your profile!");
-
-//             // 🔥 FIX: Format a direct-data SMS instead of sending a link
-//             const publicMeds = profileData?.medicines?.filter(m => m.isPublic).map(m => m.name).join(', ') || 'None';
-//             const allergies = profileData?.allergies?.join(', ') || 'None';
-
-//             const message = `🚨 EMERGENCY - MedixIQ Alert
-// ${profileData?.name || 'Unknown User'} may be in an accident.
-// Location: ${mapLink}
-// Blood: ${profileData?.bloodGroup || 'Unknown'}
-// Allergies: ${allergies}
-// Meds: ${publicMeds}`;
-
-//             // 📱 CALL OUR NATIVE ANDROID SMS PLUGIN
-//             if (Capacitor.isNativePlatform() && SentinelNative && SentinelNative.sendEmergencySms) {
-//                 await SentinelNative.sendEmergencySms({
-//                     phone: contactPhone,
-//                     message: message
-//                 });
-//                 alert("Emergency SMS Dispatched Successfully.");
-//             } else {
-//                 console.log("SIMULATED SMS SENT:", message);
-//                 alert("Web Mode: SMS Simulation logged to console.");
-//             }
-//         } catch (error) {
-//             console.error("SMS Dispatch Failed", error);
-//             alert("Failed to send emergency SMS.");
-//         }
-//     };
-
-//     // const executeSmsDispatch = async (profileData) => {
-//     //     setAccidentDetected(false); // Hide overlay
-        
-//     //     try {
-//     //         // 1. Show Lock Screen Notification
-//     //         if (profileData) showLockScreenInfo(profileData);
-
-//     //         // 2. Send SMS
-//     //         const loc = await getLastKnownLocation();
-            
-//     //         // Fixed standard Google Maps link format
-//     //         const mapLink = loc ? `https://www.google.com/maps?q=${loc.lat},${loc.lng}` : "Location unknown";
-            
-//     //         const contactPhone = profileData?.emergencyContacts?.[0]?.phone;
-//     //         if (!contactPhone) return alert("No emergency contact set!");
-
-//     //         const message = `🚨 EMERGENCY - MedixIQ Alert\n${profileData?.name} may be in an accident.\nLocation: ${mapLink}\nBlood: ${profileData?.bloodGroup || 'N/A'}\nMed Info: https://medmind-heathcare.netlify.app/emergency/${profileData?.token}`;
-
-//     //         // 📱 CALL OUR NATIVE ANDROID SMS PLUGIN
-//     //      if (Capacitor.isNativePlatform() && SentinelNative && SentinelNative.sendEmergencySms) {
-//     //             await SentinelNative.sendEmergencySms({
-//     //                 phone: contactPhone,
-//     //                 message: message
-//     //             });
-//     //             alert("Emergency SMS Dispatched Successfully.");
-//     //         } else {
-//     //             // 👇 Fallback for testing in the browser
-//     //             console.log("SIMULATED SMS SENT:", message);
-//     //             alert("Web Mode: SMS Simulation logged to console.");
-//     //         }
-//     //     } catch (error) {
-//     //         console.error("SMS Dispatch Failed", error);
-//     //         alert("Failed to send emergency SMS.");
-//     //     }
-//     // };
-
-//     return {
-//         isEnabled,
-//         toggleSentinel,
-//         accidentDetected,
-//         cancelEmergency,
-//         executeSmsDispatch,
-//         simulateAccident // 👈 EXPORT SIMULATOR
-//     };
-// };

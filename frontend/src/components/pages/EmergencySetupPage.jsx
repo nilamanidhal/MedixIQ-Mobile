@@ -100,7 +100,7 @@ const EmergencySetupPage = () => {
 
 
     // 3. Save Profile
-  const handleSave = async () => {
+const handleSave = async () => {
     setSaving(true);
     try {
         const cleanData = {
@@ -126,32 +126,34 @@ const EmergencySetupPage = () => {
             setQrToken(res.data.profile.token);
         }
 
-        // ✅ Native mein bhi save karo — direct data pass karo
-        await saveEmergencyDataForNative(cleanData);
+        // ✅ Flat structure mein save karo — ye Java padh sakta hai
+        const nativeData = {
+            name: cleanData.name || 'Unknown',
+            bloodGroup: cleanData.bloodGroup || 'Unknown',
+            allergies: cleanData.allergies.join(', ') || 'None',
+            meds: cleanData.medicines
+                ?.filter(m => m.isPublic)
+                ?.map(m => m.name)
+                ?.join(', ') || 'None',
+            emergencyPhone: cleanData.emergencyContacts?.[0]?.phone || '',
+        };
 
-        // ✅ Preferences mein bhi store karo future ke liye
+        console.log("Saving native data:", JSON.stringify(nativeData));
+
+        // ✅ Preferences mein save karo
         await Preferences.set({
             key: 'emergency_profile_native',
-            value: JSON.stringify({
-                name: cleanData.name,
-                bloodGroup: cleanData.bloodGroup,
-                allergies: cleanData.allergies.join(', '),
-                meds: cleanData.medicines?.filter(m => m.isPublic)?.map(m => m.name)?.join(', ') || 'None',
-                emergencyPhone: cleanData.emergencyContacts?.[0]?.phone || '',
-            })
+            value: JSON.stringify(nativeData)
         });
 
+        // ✅ Native Java mein bhi save karo
+        await saveEmergencyDataForNative(cleanData);
+
         alert("Emergency Profile Saved!");
-} catch (err) {
-    console.error("Full error:", err);
-    console.error("Response:", err?.response?.data);
-    
-    const msg = err?.response?.data?.message 
-        || err?.response?.data?.error
-        || err?.message
-        || "Unknown error";
-    alert("Error: " + msg);
-} finally {
+    } catch (err) {
+        console.error("Save error:", err?.response?.data);
+        alert("Error: " + (err?.response?.data?.message || err?.message || "Unknown error"));
+    } finally {
         setSaving(false);
     }
 };

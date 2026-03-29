@@ -14,40 +14,40 @@ import androidx.core.app.NotificationCompat;
 public class EmergencyInfoHelper {
 
     // ── Called from SentinelService (lock screen medical ID only) ──
-    public static void showLockScreenMedicalId(
-        Context context, String name, String blood,
-        String allergies, String meds
-    ) {
-        NotificationManager manager =
-            (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        String channelId = "EmergencyMedicalId";
+public static void showLockScreenMedicalId(
+    Context context, String name, String blood,
+    String allergies, String meds, String phone
+) {
+    NotificationManager manager =
+        (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+    String channelId = "EmergencyMedicalId";
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                channelId, "Emergency Medical ID",
-                NotificationManager.IMPORTANCE_HIGH
-            );
-            channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
-            manager.createNotificationChannel(channel);
-        }
-
-        // Wake screen
-        wakeScreen(context);
-
-        String text = "Blood: " + blood + "\nAllergies: " + allergies + "\nMeds: " + meds;
-
-        Notification notification = new NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("🚨 MEDICAL ID: " + name)
-            .setStyle(new NotificationCompat.BigTextStyle().bigText(text))
-            .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setOngoing(true)
-            .build();
-
-        manager.notify(911, notification);
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        NotificationChannel channel = new NotificationChannel(
+            channelId, "Emergency Medical ID",
+            NotificationManager.IMPORTANCE_HIGH
+        );
+        channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        manager.createNotificationChannel(channel);
     }
+
+    wakeScreen(context);
+
+    String text = "Blood: " + blood + "\nAllergies: " + allergies + "\nMeds: " + meds + "\nphone: " + phone;
+
+    Notification notification = new NotificationCompat.Builder(context, channelId)
+        .setSmallIcon(android.R.drawable.ic_dialog_alert)
+        .setContentTitle("🚨 MEDICAL ID: " + name)
+        .setStyle(new NotificationCompat.BigTextStyle().bigText(text))
+        .setPriority(NotificationCompat.PRIORITY_MAX)
+        .setCategory(NotificationCompat.CATEGORY_ALARM)
+        .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+        .setOngoing(true)
+        // ❌ NO fullScreenPendingIntent here
+        .build();
+
+    manager.notify(911, notification);
+}
 
     // ── Called from EmergencyReceiver — shows countdown activity via fullScreenIntent ──
     public static void showEmergencyFullScreen(

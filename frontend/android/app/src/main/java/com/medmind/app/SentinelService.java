@@ -123,16 +123,17 @@ private void triggerEmergencyFromService() {
     String phone = prefs.getString("emergency_phone", "");
     String smsEnabled = prefs.getString("sentinel_sms_enabled", "true");
 
-    Log.d("SentinelService", "🚨 Triggering: " + name + " | SMS: " + smsEnabled);
+    Log.d("SentinelService", "🚨 Triggering: " + name + " | Phone: " + phone + " | SMS: " + smsEnabled);
 
-    // 1. Pending flag for React
-    prefs.edit().putString("pending_accident", "true").apply();
+    // Save timestamp + pending flag
+    prefs.edit()
+        .putString("pending_accident", "true")
+        .putString("accident_timestamp", String.valueOf(System.currentTimeMillis()))
+        .apply();
 
-    // 2. Get map link
     String mapLink = getLastKnownMapLink();
 
-    // ✅ 3. Send broadcast to EmergencyReceiver
-    // BroadcastReceiver se fullScreenIntent notification → bypasses BAL!
+    // ✅ Broadcast → EmergencyReceiver → fullScreenIntent notification
     Intent broadcastIntent = new Intent(this, EmergencyReceiver.class);
     broadcastIntent.putExtra("name", name);
     broadcastIntent.putExtra("phone", phone);
@@ -143,18 +144,16 @@ private void triggerEmergencyFromService() {
     broadcastIntent.putExtra("smsEnabled", smsEnabled);
     sendBroadcast(broadcastIntent);
 
-    // 4. Lock screen medical ID notification (backup)
-    showLockScreenMedicalId(name, blood, allergies, meds);
+    // ✅ Medical ID lock screen — 11 sec baad (after countdown)
+    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+        SharedPreferences p = getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE);
+        if (!"true".equals(p.getString("accident_cancelled", "false"))) {
+            EmergencyInfoHelper.showLockScreenMedicalId(this, name, blood, allergies, meds, phone);
+        }
+    }, 11000);
 
-    // 5. notifyListeners for React (if app open)
+    // Notify React if app open
     SentinelPlugin.fireAccidentEvent(pluginInstance);
-
-    // ❌ NO fetchLiveLocationAndSendSms here — SMS sent from EmergencyAlertActivity after 10 sec
-}
-
-private void showLockScreenMedicalId(String name, String blood,
-                                      String allergies, String meds) {
-    EmergencyInfoHelper.showLockScreenMedicalId(this, name, blood, allergies, meds);
 }
 
 private String getLastKnownMapLink() {
@@ -215,7 +214,7 @@ private void launchEmergencyAlertViaPendingIntent(
         }
 
         // ✅ Also show lock screen notification as backup
-        EmergencyInfoHelper.showLockScreenMedicalId(this, name, blood, allergies, meds);
+        EmergencyInfoHelper.showLockScreenMedicalId(this, name, blood, allergies, meds, phone);
 
     } catch (Exception e) {
         Log.e("SentinelService", "Alert launch failed: " + e.getMessage());
