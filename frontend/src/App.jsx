@@ -24,6 +24,7 @@ import EmergencyOverlay from './components/EmergencyOverlay';
 import { SentinelProvider } from './contexts/SentinelContext';
 import ProfileSettings from './components/pages/ProfileSettings';
 import ChangePassword from './components/pages/ChangePassword';
+import ForgotPassword from './components/pages/ForgotPassword';
 
 // 🟢 1. Create a Helper Component to Handle Back Button
 const BackButtonHandler = () => {

@@ -29,6 +29,7 @@
     "@google/genai": "^1.39.0",
     "axios": "^1.11.0",
     "capacitor-native-settings": "^7.0.2",
+    "firebase": "^12.11.0",
     "groq-sdk": "^0.37.0",
     "jspdf": "^3.0.4",
     "jspdf-autotable": "^5.0.2",

@@ -1,3 +1,8 @@
+import { auth } from '../firebase';
+import { 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword 
+} from 'firebase/auth';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { Network } from '@capacitor/network';
@@ -69,44 +74,68 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-// 4. LOGIN (Fixed)
+// 🔥 NEW FIREBASE LOGIN
     const login = async (email, password) => {
-        // ❌ REMOVED: setLoading(true) - Let the Login component handle its own button loading!
         try {
-            const response = await axios.post('/auth/login', { email, password });
-            const { token, user } = response.data;
+            // 1. Firebase securely verifies the password in milliseconds
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const firebaseToken = await userCredential.user.getIdToken();
             
-            localStorage.setItem('token', token);
-            localStorage.setItem('user_data', JSON.stringify(user));
+            // 2. Send token to Node.js to grab their MedMind profile
+            // (Note: We will build this new backend route next!)
+            const response = await axios.get('/auth/me', {
+                headers: { Authorization: `Bearer ${firebaseToken}` }
+            });
             
-            setToken(token);
-            setUser(user);
+            // 3. Keep offline caching
+            localStorage.setItem('token', firebaseToken);
+            localStorage.setItem('user_data', JSON.stringify(response.data.user));
+            
+            setToken(firebaseToken);
+            setUser(response.data.user);
             return { success: true };
         } catch (error) {
-            // Update error message to warn users about the sleeping server!
-            const msg = error.response?.data?.message || 'Network Error. (If the server was asleep, try again in 30s!)';
+            console.error("Firebase Login Error:", error);
+            const msg = error.code === 'auth/invalid-credential' 
+                ? "Invalid email or password." 
+                : "Login failed. Please try again.";
             return { success: false, message: msg };
         }
     };
 
-    // 5. REGISTER (Fixed)
+    // 🔥 NEW FIREBASE REGISTER
     const register = async (userData) => {
-        // ❌ REMOVED: setLoading(true)
         try {
-            const response = await axios.post('/auth/register', userData);
-            const { token, user } = response.data;
+            // 1. Firebase securely creates the account
+            const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
+            const firebaseToken = await userCredential.user.getIdToken();
 
-            localStorage.setItem('token', token);
-            localStorage.setItem('user_data', JSON.stringify(user));
+            // 2. Now we send the REST of the data (Name, Age, Gender) to MongoDB
+            const response = await axios.post('/auth/register-profile', {
+                name: userData.name,
+                email: userData.email, // Kept for reference in MongoDB
+                age: userData.age,
+                gender: userData.gender,
+                firebaseUid: userCredential.user.uid // Link DB to Firebase
+            }, {
+                headers: { Authorization: `Bearer ${firebaseToken}` }
+            });
+
+            localStorage.setItem('token', firebaseToken);
+            localStorage.setItem('user_data', JSON.stringify(response.data.user));
             
-            setToken(token);
-            setUser(user);
+            setToken(firebaseToken);
+            setUser(response.data.user);
             return { success: true };
         } catch (error) {
-            const msg = error.response?.data?.message || 'Network Error. (If the server was asleep, try again in 30s!)';
+            console.error("Firebase Register Error:", error);
+            const msg = error.code === 'auth/email-already-in-use'
+                ? "This email is already registered."
+                : "Registration failed. Please try again.";
             return { success: false, message: msg };
         }
     };
+
 
     //LOGOUT
     const logout = async () => {
