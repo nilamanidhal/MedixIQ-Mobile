@@ -92,10 +92,10 @@ router.get('/stats', authMiddleware, async (req, res) => {
     // ==========================================
     // 📤 SEND RESPONSE
     // ==========================================
-    res.json({
+res.json({
         adherenceRate,
-        totalMedicines: medicines.length, // All time added (active)
-        activeMedicines: medicines.filter(m => m.isActive && !m.isPaused).length,
+        totalMedicines: totalMedicinesCount, // 🔥 THE FIX: Use the new total count here!
+        activeMedicines: medicines.filter(m => !m.isPaused).length,
         weeklyProgress: progressData, 
         medicineBreakdown
     });
