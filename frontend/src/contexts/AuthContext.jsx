@@ -1,7 +1,9 @@
 import { auth } from '../firebase';
 import { 
     createUserWithEmailAndPassword, 
-    signInWithEmailAndPassword 
+    signInWithEmailAndPassword,
+    sendEmailVerification,
+    signOut
 } from 'firebase/auth';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
@@ -77,17 +79,20 @@ export const AuthProvider = ({ children }) => {
 // 🔥 NEW FIREBASE LOGIN
     const login = async (email, password) => {
         try {
-            // 1. Firebase securely verifies the password in milliseconds
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            
+            // 🚨 STRICT CHECK: Is the email actually verified?
+            if (!userCredential.user.emailVerified) {
+                await signOut(auth); // Log them back out instantly
+                return { success: false, message: "Please verify your email address. Check your inbox!" };
+            }
+
             const firebaseToken = await userCredential.user.getIdToken();
             
-            // 2. Send token to Node.js to grab their MedMind profile
-            // (Note: We will build this new backend route next!)
             const response = await axios.get('/auth/me', {
                 headers: { Authorization: `Bearer ${firebaseToken}` }
             });
             
-            // 3. Keep offline caching
             localStorage.setItem('token', firebaseToken);
             localStorage.setItem('user_data', JSON.stringify(response.data.user));
             
@@ -104,29 +109,31 @@ export const AuthProvider = ({ children }) => {
     };
 
     // 🔥 NEW FIREBASE REGISTER
-    const register = async (userData) => {
+   const register = async (userData) => {
         try {
-            // 1. Firebase securely creates the account
             const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
             const firebaseToken = await userCredential.user.getIdToken();
 
-            // 2. Now we send the REST of the data (Name, Age, Gender) to MongoDB
-            const response = await axios.post('/auth/register-profile', {
+            // 🚨 SEND THE VERIFICATION EMAIL
+            await sendEmailVerification(userCredential.user);
+
+            // Create their profile in your MongoDB database
+            await axios.post('/auth/register-profile', {
                 name: userData.name,
-                email: userData.email, // Kept for reference in MongoDB
+                email: userData.email,
                 age: userData.age,
                 gender: userData.gender,
-                firebaseUid: userCredential.user.uid // Link DB to Firebase
+                firebaseUid: userCredential.user.uid
             }, {
                 headers: { Authorization: `Bearer ${firebaseToken}` }
             });
 
-            localStorage.setItem('token', firebaseToken);
-            localStorage.setItem('user_data', JSON.stringify(response.data.user));
+            // 🚨 LOG THEM OUT IMMEDIATELY SO THEY CANNOT ENTER THE APP YET
+            await signOut(auth);
             
-            setToken(firebaseToken);
-            setUser(response.data.user);
-            return { success: true };
+            // Return a special flag so the UI knows what happened
+            return { success: true, needsVerification: true };
+            
         } catch (error) {
             console.error("Firebase Register Error:", error);
             const msg = error.code === 'auth/email-already-in-use'

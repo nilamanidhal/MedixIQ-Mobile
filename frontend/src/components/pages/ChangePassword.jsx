@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { useAuth } from '../../contexts/AuthContext';
+import { auth } from '../../firebase'; 
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { ArrowLeft, Key, Save } from 'lucide-react';
 import LoadingSpinner from '../LoadingSpinner'; 
 
 const ChangePassword = () => {
-    const { token, API_BASE_URL } = useAuth();
     const navigate = useNavigate();
 
     const [saving, setSaving] = useState(false);
@@ -26,7 +25,7 @@ const ChangePassword = () => {
         e.preventDefault();
         setMessage({ type: '', text: '' });
 
-        // Client-side validation
+        // 1. Client-side validation
         if (formData.newPassword !== formData.confirmPassword) {
             setMessage({ type: 'error', text: 'New passwords do not match.' });
             return;
@@ -37,24 +36,36 @@ const ChangePassword = () => {
             return;
         }
 
+        const user = auth.currentUser;
+        if (!user) {
+            setMessage({ type: 'error', text: 'Authentication error. Please log in again.' });
+            return;
+        }
+
         setSaving(true);
 
         try {
-            await axios.put(`${API_BASE_URL}/auth/change-password`, {
-                currentPassword: formData.currentPassword,
-                newPassword: formData.newPassword
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            // 🔥 2. Re-authenticate the user with their current password
+            const credential = EmailAuthProvider.credential(user.email, formData.currentPassword);
+            await reauthenticateWithCredential(user, credential);
+
+            // 🔥 3. If re-auth succeeds, update the password in Firebase
+            await updatePassword(user, formData.newPassword);
 
             setMessage({ type: 'success', text: 'Password changed successfully!' });
             setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' }); // Clear form
             
         } catch (error) {
-            console.error("Password Change Failed:", error.response?.data);
-            const errorMsg = error.response?.data?.message 
-                          || error.response?.data?.errors?.[0]?.msg 
-                          || "Failed to change password. Please try again.";
+            console.error("Password Change Failed:", error);
+            
+            // Handle specific Firebase error codes beautifully
+            let errorMsg = "Failed to change password. Please try again.";
+            if (error.code === 'auth/invalid-credential') {
+                errorMsg = "Your current password is incorrect.";
+            } else if (error.code === 'auth/too-many-requests') {
+                errorMsg = "Too many failed attempts. Please try again later.";
+            }
+
             setMessage({ type: 'error', text: errorMsg });
         } finally {
             setSaving(false);
