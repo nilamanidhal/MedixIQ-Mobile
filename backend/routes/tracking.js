@@ -106,6 +106,103 @@ router.get('/stats', authMiddleware, async (req, res) => {
   }
 });
 
+
+// --- NEW INTELLIGENCE ENDPOINTS ---
+
+// 1. Time Analysis: When does the user forget?
+router.get('/time-analysis', authMiddleware, async (req, res) => {
+    try {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const logs = await MedicineLog.find({
+            userId: req.user._id,
+            date: { $gte: thirtyDaysAgo }
+        });
+
+        // Initialize slots
+        const timeSlots = { 
+            morning: { taken: 0, missed: 0 }, 
+            afternoon: { taken: 0, missed: 0 }, 
+            evening: { taken: 0, missed: 0 }, 
+            night: { taken: 0, missed: 0 } 
+        };
+
+        logs.forEach(log => {
+            if (!log.time) return;
+            const hour = parseInt(log.time.split(':')[0]);
+            
+            let slot = 'night';
+            if (hour >= 6 && hour < 12) slot = 'morning';
+            else if (hour >= 12 && hour < 16) slot = 'afternoon';
+            else if (hour >= 16 && hour < 20) slot = 'evening';
+
+            timeSlots[slot][log.status === 'taken' ? 'taken' : 'missed']++;
+        });
+
+        // Find the slot with the highest percentage of misses
+        let worstSlot = null;
+        let highestMissRate = 0;
+
+        Object.keys(timeSlots).forEach(slot => {
+            const data = timeSlots[slot];
+            const total = data.taken + data.missed;
+            if (total > 0) {
+                const missRate = data.missed / total;
+                if (missRate > highestMissRate && data.missed > 0) {
+                    highestMissRate = missRate;
+                    worstSlot = slot;
+                }
+            }
+        });
+
+        res.json({ timeSlots, worstSlot });
+    } catch (err) {
+        console.error("Time analysis error:", err);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+// 2. Weekly Pattern: Which day is the weakest?
+router.get('/weekly-pattern', authMiddleware, async (req, res) => {
+    try {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const logs = await MedicineLog.find({
+            userId: req.user._id,
+            date: { $gte: thirtyDaysAgo }
+        });
+
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const pattern = days.map(d => ({ day: d, taken: 0, missed: 0, rate: 0 }));
+
+        logs.forEach(log => {
+            const dayIndex = new Date(log.date).getDay();
+            if (log.status === 'taken') pattern[dayIndex].taken++;
+            if (log.status === 'missed') pattern[dayIndex].missed++;
+        });
+
+        let worstDay = null;
+        let lowestRate = 101; // Start above 100%
+
+        pattern.forEach(p => {
+            const total = p.taken + p.missed;
+            if (total > 0) {
+                p.rate = Math.round((p.taken / total) * 100);
+                if (p.rate < lowestRate) {
+                    lowestRate = p.rate;
+                    worstDay = p;
+                }
+            }
+        });
+
+        res.json({ pattern, worstDay });
+    } catch (err) {
+        console.error("Weekly pattern error:", err);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
 // 👇 THIS LINE IS CRITICAL. IT WAS LIKELY MISSING.
 module.exports = router;
 
