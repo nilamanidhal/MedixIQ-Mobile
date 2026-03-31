@@ -159,15 +159,41 @@ private void triggerEmergencyFromService() {
 private String getLastKnownMapLink() {
     try {
         LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        Location loc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-        if (loc == null) loc = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-        if (loc != null) {
-            return "https://www.google.com/maps?q=" + loc.getLatitude() + "," + loc.getLongitude();
+        Location best = null;
+
+        // ✅ Teeno providers try karo
+        String[] providers = {
+            LocationManager.GPS_PROVIDER,
+            LocationManager.NETWORK_PROVIDER,
+            LocationManager.PASSIVE_PROVIDER
+        };
+
+        for (String provider : providers) {
+            try {
+                Location loc = lm.getLastKnownLocation(provider);
+                if (loc != null) {
+                    if (best == null || loc.getAccuracy() < best.getAccuracy()) {
+                        best = loc;
+                    }
+                }
+            } catch (SecurityException e) {
+                Log.w("SentinelService", "Provider " + provider + " failed");
+            }
         }
-    } catch (SecurityException e) {
-        Log.e("SentinelService", "Location permission missing", e);
+
+        if (best != null) {
+            Log.d("SentinelService", "✅ Location found: " + best.getLatitude() + 
+                  " via " + best.getProvider());
+            return "https://www.google.com/maps?q=" + 
+                   best.getLatitude() + "," + best.getLongitude();
+        }
+
+    } catch (Exception e) {
+        Log.e("SentinelService", "Location error", e);
     }
-    return "Location unavailable";
+
+    Log.w("SentinelService", "⚠️ No location available");
+    return "Location unavailable — GPS was off";
 }
 
 private void launchEmergencyAlertViaPendingIntent(

@@ -158,6 +158,25 @@ export const useSentinel = () => {
     const toggleSentinel = async (state) => {
         if (state && Capacitor.isNativePlatform()) {
 
+            // ✅ Pehle check karo emergency data valid hai ya nahi
+        const { value } = await Preferences.get({ 
+            key: 'emergency_profile_native' 
+        });
+        
+        if (!value) {
+            alert("⚠️ Please save your Emergency Profile first before enabling Sentinel Mode.");
+            return;
+        }
+        
+        const parsed = JSON.parse(value);
+        if (!parsed.name || parsed.name === 'Unknown' || !parsed.emergencyPhone) {
+            alert(
+                "⚠️ Incomplete Emergency Profile!\n\n" +
+                "Please go to Emergency Profile, fill your details, and save before enabling Sentinel Mode."
+            );
+            return;
+        }
+
             // ✅ Fix 1: GPS check — sirf permission check karo, timeout pe block mat karo
             try {
                 const { Geolocation } = await import('@capacitor/geolocation');

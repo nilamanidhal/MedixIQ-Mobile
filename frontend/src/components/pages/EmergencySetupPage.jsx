@@ -7,6 +7,7 @@ import { useSentinel } from '../../hooks/useSentinel'; // ← add karo
 import LoadingSpinner from '../LoadingSpinner';
 import { ShieldAlert, Save, ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { Preferences } from '@capacitor/preferences'
 
 const EmergencySetupPage = () => {
     const { token: authToken, API_BASE_URL, user } = useAuth();
