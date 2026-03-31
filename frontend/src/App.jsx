@@ -25,6 +25,7 @@ import { SentinelProvider } from './contexts/SentinelContext';
 import ProfileSettings from './components/pages/ProfileSettings';
 import ChangePassword from './components/pages/ChangePassword';
 import ForgotPassword from './components/pages/ForgotPassword';
+import UpdatePrompt from './components/UpdatePrompt';
 
 // 🟢 1. Create a Helper Component to Handle Back Button
 const BackButtonHandler = () => {
@@ -102,7 +103,7 @@ function App() {
 
       {/* ✅ PLACE IT HERE: Inside Router, Outside Routes */}
         <BackButtonHandler />
-
+        <UpdatePrompt />
         <Routes>
 
           {/* 🔥 PUBLIC EMERGENCY ROUTE (NO AUTH WHATSOEVER) */}
