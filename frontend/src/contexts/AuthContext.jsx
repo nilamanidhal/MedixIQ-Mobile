@@ -3,7 +3,7 @@ import {
     createUserWithEmailAndPassword, 
     signInWithEmailAndPassword,
     sendEmailVerification,
-    signOut
+    signOut,onIdTokenChanged
 } from 'firebase/auth';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
@@ -28,6 +28,27 @@ export const AuthProvider = ({ children }) => {
     });
     
     const [token, setToken] = useState(() => localStorage.getItem('token') || null);
+
+    // 🔥 THE MAGIC FIX: Listen for background token refreshes automatically!
+    useEffect(() => {
+        const unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                // Firebase just silently generated a fresh, unexpired token!
+                const freshToken = await firebaseUser.getIdToken();
+                
+                // Update everything so axios stops throwing 401 errors
+                localStorage.setItem('token', freshToken);
+                setToken(freshToken);
+                axios.defaults.headers.common['Authorization'] = `Bearer ${freshToken}`;
+            } else {
+                // User actually clicked Log Out
+                delete axios.defaults.headers.common['Authorization'];
+            }
+        });
+
+        // Cleanup listener when app closes
+        return () => unsubscribe();
+    }, []);
     
     // We start loading as FALSE because we trust the local storage first.
     // This allows the app to render the Dashboard immediately even if offline.
