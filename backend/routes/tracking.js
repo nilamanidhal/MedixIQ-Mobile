@@ -10,6 +10,9 @@ router.get('/stats', authMiddleware, async (req, res) => {
     // 1. GET RANGE FROM FRONTEND (Default to 7)
     const range = parseInt(req.query.range) || 7;
 
+    // 🔥 THE MISSING PIECE: Actually count all medicines for the lifetime stat!
+    const totalMedicinesCount = await Medicine.countDocuments({ userId: req.user._id });
+    
     // 2. FETCH MEDICINES (Active only, for the breakdown list)
     const medicines = await Medicine.find({ userId: req.user._id, isActive: true });
     
