@@ -8,10 +8,10 @@ const ActiveMedicines = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingMedicine, setEditingMedicine] = useState(null);
 
-  // 1. Refresh data when entering this page
-  useEffect(() => {
-    fetchMedicines();
-  }, []);
+  // // 1. Refresh data when entering this page
+  // useEffect(() => {
+  //   fetchMedicines();
+  // }, []);
 
   // 2. Handlers for switching views
   const startAdd = () => {
@@ -27,7 +27,7 @@ const ActiveMedicines = () => {
   const closeForm = () => {
     setIsAdding(false);
     setEditingMedicine(null);
-    fetchMedicines(); // Refresh list after add/edit
+    // fetchMedicines(); 
   };
 
   return (

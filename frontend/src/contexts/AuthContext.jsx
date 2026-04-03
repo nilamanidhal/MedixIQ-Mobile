@@ -178,14 +178,30 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
         console.error("Error cancelling notifications:", error);
     }
-        localStorage.removeItem('token');
-        localStorage.removeItem('user_data');
-
-        //SECURITY FIX: WIPE ALL OFFLINE DATA
+       // ✅ localStorage clear
+    localStorage.removeItem('token');
+    localStorage.removeItem('user_data');
     localStorage.removeItem('cached_medicines');
     localStorage.removeItem('cached_medicine_logs');
     localStorage.removeItem('offline_mutation_queue');
+    localStorage.removeItem('last_sync_time');
+    localStorage.removeItem('prefs_migrated');
 
+
+    // ✅ Preferences bhi clear karo — naya user ka data mix na ho
+    try {
+        await Preferences.remove({ key: 'offline_mutation_queue' });
+        await Preferences.remove({ key: 'cached_medicines' });
+        await Preferences.remove({ key: 'cached_medicine_logs' });
+        await Preferences.remove({ key: 'emergency_profile_native' });
+        await Preferences.remove({ key: 'sentinel_enabled' });
+        await Preferences.remove({ key: 'sentinel_sms_enabled' });
+        await Preferences.remove({ key: 'auth_token' });
+    } catch (e) {
+        console.error("Preferences clear error:", e);
+    }
+
+    await signOut(auth);
      setToken(null);
         setUser(null);
     };

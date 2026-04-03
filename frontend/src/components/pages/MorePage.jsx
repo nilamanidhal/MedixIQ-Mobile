@@ -5,7 +5,7 @@ import ConfirmationModal from '../ConfirmationModal';
 import { useSentinelContext } from '../../contexts/SentinelContext';
 import { 
   Siren, ShieldAlert, AlertTriangle, FileText, 
-  Activity, User, HelpCircle, LogOut, ChevronRight 
+  Activity, User, HelpCircle, LogOut, ChevronRight, Shield
 } from 'lucide-react';
 
 const MorePage = () => {
@@ -80,6 +80,13 @@ const MorePage = () => {
           bg: 'bg-purple-50',
           desc: 'Get help with the app',
           path: '/contact'
+        },
+        { 
+          label: 'Legal & Privacy', 
+          icon: <Shield size={20} className="text-slate-600" />, 
+          bg: 'bg-slate-100',
+          desc: 'Terms, Privacy Policy & Licenses',
+          path: '/legal'
         }
       ]
     }

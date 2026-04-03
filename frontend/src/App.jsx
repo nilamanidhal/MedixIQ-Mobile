@@ -26,6 +26,7 @@ import ProfileSettings from './components/pages/ProfileSettings';
 import ChangePassword from './components/pages/ChangePassword';
 import ForgotPassword from './components/pages/ForgotPassword';
 import UpdatePrompt from './components/UpdatePrompt';
+import LegalAndPrivacy from './components/pages/LegalAndPrivacy';
 
 // 🟢 1. Create a Helper Component to Handle Back Button
 const BackButtonHandler = () => {
@@ -140,6 +141,7 @@ function App() {
             <Route path="/history" element={<HistorySection />} />
             <Route path="/health-tracking" element={<HealthTracking />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/legal" element={<LegalAndPrivacy />} />
             <Route path="/medical-records" element={<MedicalRecords />} />
             <Route path="/more" element={<MorePage />} />
             {/* 🔥 NEW PROTECTED ROUTE FOR EMERGENCY SETUP */}

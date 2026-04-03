@@ -126,7 +126,44 @@ const MedicineList = ({ onEdit }) => {
         return new Date(startDate) <= now && new Date(endDate) >= now;
     };
 
-    if (loading && medicines.length === 0) return <LoadingSpinner text="Loading medicines..." />;
+// ✅ BAAD MEIN — skeleton:
+if (loading && medicines.length === 0) {
+    return (
+        <div className="space-y-4 pb-24">
+            <div className="flex justify-between items-center px-1">
+                <div className="h-5 w-28 bg-slate-200 rounded animate-pulse"/>
+                <div className="h-8 w-24 bg-slate-100 rounded-lg animate-pulse"/>
+            </div>
+            {[1, 2, 3].map(i => (
+                <div key={i} className="bg-white rounded-2xl p-5 border border-slate-100">
+                    {/* Top row */}
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 bg-slate-100 rounded-2xl animate-pulse"/>
+                            <div>
+                                <div className="h-5 w-32 bg-slate-100 rounded animate-pulse mb-2"/>
+                                <div className="h-3 w-20 bg-slate-100 rounded animate-pulse"/>
+                            </div>
+                        </div>
+                        <div className="h-6 w-14 bg-slate-100 rounded-md animate-pulse"/>
+                    </div>
+                    {/* Times */}
+                    <div className="flex gap-2 mb-4 pl-16">
+                        <div className="h-6 w-16 bg-slate-100 rounded-md animate-pulse"/>
+                        <div className="h-6 w-16 bg-slate-100 rounded-md animate-pulse"/>
+                    </div>
+                    {/* Actions */}
+                    <div className="grid grid-cols-4 gap-3 border-t border-slate-50 pt-4">
+                        {[1,2,3,4].map(j => (
+                            <div key={j} className="h-12 bg-slate-50 rounded-xl animate-pulse"/>
+                        ))}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 
     // --- EMPTY STATE ---
     if (medicines.length === 0) {

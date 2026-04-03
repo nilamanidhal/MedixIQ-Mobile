@@ -48,6 +48,7 @@ const Dashboard = () => {
     const [isOnline, setIsOnline] = useState(true);
     const [now, setNow] = useState(new Date()); // State for live time updates
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const {loading } = useMedicines();
 
 // Modal State
     const [showReviewModal, setShowReviewModal] = useState(false);
@@ -85,12 +86,9 @@ const Dashboard = () => {
          };
     }, []);
 
-    // Recalculate whenever data changes (Instantly updates UI even offline)
-    useEffect(() => {
-        if (medicines.length > 0 || logs.length >= 0) {
+        useEffect(() => {
             calculateDashboardStats();
-        }
-    }, [medicines, logs, now]);
+        }, [medicines, logs, now]); // loading condition hatao — hamesha run karo
 
     const checkNetwork = async () => {
         const status = await Network.getStatus();
@@ -210,11 +208,13 @@ const Dashboard = () => {
 
         // Update Modal Data
         // Only update if we haven't manually closed it
-        if (!hasClosedModalRef.current && pendingOverdue.length > 0) {
+        // ✅ BAAD MEIN — loading false hone ke baad hi dikhao:
+        if (!hasClosedModalRef.current && pendingOverdue.length > 0 && !loading) {
             setOverdueLogs(pendingOverdue);
             setShowReviewModal(true);
         } else if (pendingOverdue.length === 0) {
             setShowReviewModal(false);
+            setOverdueLogs([]);
         }
     };
 
@@ -238,6 +238,62 @@ const Dashboard = () => {
     const radius = 18;
     const circumference = 2 * Math.PI * radius;
     const strokeDashoffset = circumference - (todayStats.percentage / 100) * circumference;
+
+if (loading && medicines.length === 0) {
+        return (
+            <div className="bg-slate-50 min-h-full pb-24">
+                {/* Header skeleton */}
+                <div className="bg-green-200 px-6 pt-8 pb-6 rounded-b-[2rem] mb-6">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <div className="h-7 w-32 bg-green-300/50 rounded-lg animate-pulse mb-2"/>
+                            <div className="h-4 w-40 bg-green-300/50 rounded-lg animate-pulse"/>
+                        </div>
+                        <div className="w-12 h-12 bg-green-300/50 rounded-full animate-pulse"/>
+                    </div>
+                    <div className="mt-5 h-7 w-48 bg-green-300/50 rounded-full animate-pulse"/>
+                </div>
+
+                <div className="px-5 space-y-6">
+                    {/* Daily Goal skeleton */}
+                    <div className="bg-white rounded-3xl p-6 border border-slate-100 flex items-center justify-between">
+                        <div>
+                            <div className="h-5 w-24 bg-slate-100 rounded animate-pulse mb-2"/>
+                            <div className="h-4 w-32 bg-slate-100 rounded animate-pulse"/>
+                        </div>
+                        <div className="w-16 h-16 bg-slate-100 rounded-full animate-pulse"/>
+                    </div>
+
+                    {/* Up Next skeleton */}
+                    <div className="bg-gradient-to-br from-indigo-600 to-blue-600 rounded-3xl p-6 flex justify-between items-center">
+                        <div>
+                            <div className="h-3 w-16 bg-white/20 rounded animate-pulse mb-2"/>
+                            <div className="h-7 w-36 bg-white/20 rounded animate-pulse mb-2"/>
+                            <div className="h-4 w-24 bg-white/20 rounded animate-pulse"/>
+                        </div>
+                        <div className="w-14 h-14 bg-white/10 rounded-2xl animate-pulse"/>
+                    </div>
+
+                    {/* Schedule skeleton */}
+                    <div>
+                        <div className="h-5 w-36 bg-slate-200 rounded animate-pulse mb-4"/>
+                        {[1,2,3].map(i => (
+                            <div key={i} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 mb-3">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-14 h-10 bg-slate-100 rounded-xl animate-pulse"/>
+                                    <div>
+                                        <div className="h-4 w-24 bg-slate-100 rounded animate-pulse mb-1"/>
+                                        <div className="h-3 w-16 bg-slate-100 rounded animate-pulse"/>
+                                    </div>
+                                </div>
+                                <div className="w-8 h-8 bg-slate-100 rounded-full animate-pulse"/>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-slate-50 min-h-full pb-24">
