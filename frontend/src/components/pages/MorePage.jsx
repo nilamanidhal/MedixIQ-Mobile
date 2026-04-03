@@ -3,8 +3,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import ConfirmationModal from '../ConfirmationModal';
 import { useSentinelContext } from '../../contexts/SentinelContext';
+import { useTranslation } from 'react-i18next';
+import LanguageSelector from '../LanguageSelector';
 import { 
-  Siren, ShieldAlert, AlertTriangle, FileText, 
+  Siren, ShieldAlert, AlertTriangle, FileText, Globe,
   Activity, User, HelpCircle, LogOut, ChevronRight, Shield
 } from 'lucide-react';
 
@@ -12,6 +14,9 @@ const MorePage = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { isEnabled, toggleSentinel, simulateAccident } = useSentinelContext();
+
+  const { t } = useTranslation();
+    const [showLanguage, setShowLanguage] = useState(false);
 
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -80,6 +85,13 @@ const MorePage = () => {
           bg: 'bg-purple-50',
           desc: 'Get help with the app',
           path: '/contact'
+        },
+        {
+          label: 'Language / भाषा / ଭାଷା',
+          icon: <Globe size={20} className="text-cyan-600" />,
+          bg: 'bg-cyan-50',
+          desc: 'English · हिंदी · ଓଡ଼ିଆ',
+          action: () => setShowLanguage(true)
         },
         { 
           label: 'Legal & Privacy', 
@@ -194,6 +206,23 @@ const MorePage = () => {
         }}
         onCancel={() => setShowLogoutConfirm(false)}
       />
+
+            {/* Language Modal */}
+            {showLanguage && (
+                <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center p-4">
+                    <div className="w-full max-w-sm">
+                        <LanguageSelector onClose={() => setShowLanguage(false)} />
+                        <button
+                            onClick={() => setShowLanguage(false)}
+                            className="w-full mt-3 py-4 bg-white rounded-2xl font-bold text-slate-600"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
+
+
     </div>
   );
 };

@@ -1,0 +1,90 @@
+{
+  "nav": {
+    "home": "होम", "meds": "दवाएं", "alerts": "अलर्ट", "health": "स्वास्थ्य", "more": "अधिक"
+  },
+  "dashboard": {
+    "greeting": "नमस्ते, {{name}}!", "friend": "दोस्त", "subtitle": "आज स्वस्थ रहें।",
+    "online": "ऑनलाइन", "offline": "ऑफलाइन मोड", "syncPending": "सिंक बाकी है...", "synced": "सिंक: {{time}}",
+    "enableNotifications": "सूचनाएं चालू करें", "fixNow": "अभी ठीक करें",
+    "dailyGoal": "दैनिक लक्ष्य", "dosesTaken": "खुराक ली गई",
+    "upNext": "अगली दवा", "allCaughtUp": "सब ठीक है!", "noPending": "कोई दवा बाकी नहीं।",
+    "todaySchedule": "आज का शेड्यूल", "noMedicines": "आज कोई दवा नहीं!"
+  },
+  "medicines": {
+    "title": "मेरी दवाएं", "subtitle": "खुराक और शेड्यूल प्रबंधित करें", "active": "सक्रिय", "loading": "दवाएं लोड हो रही हैं...",
+    "noMedicines": "अभी कोई दवा नहीं", "noMedicinesDesc": "अपनी पहली दवा जोड़ने के लिए + बटन दबाएं।",
+    "status": { "active": "सक्रिय", "paused": "रुका", "expired": "खत्म", "future": "आगामी" },
+    "form": {
+      "editMedicine": "दवा संपादित करें", "newMedicine": "नई दवा", "addDetails": "विवरण और अनुस्मारक जोड़ें",
+      "medicineName": "दवा का नाम", "treatsCondition": "बीमारी", "optional": "(वैकल्पिक)",
+      "dosage": "खुराक", "reminderTimes": "अनुस्मारक समय", "addTime": "समय जोड़ें",
+      "startDate": "शुरू की तारीख", "endDate": "खत्म की तारीख", "notes": "नोट्स", "saveMedicine": "दवा सहेजें", "saving": "सहेजा जा रहा है..."
+    },
+    "list": {
+      "yourList": "आपकी सूची ({{count}})", "syncAlarms": "अलार्म सिंक", "syncing": "सिंक हो रहा...", "clear": "हटाएं"
+    }
+  },
+  "health": {
+    "title": "स्वास्थ्य इनसाइट्स", "subtitle": "आपका {{range}}-दिन का स्वास्थ्य अवलोकन।",
+    "adherenceScore": "अनुपालन स्कोर", "lifetimeMedicines": "कुल दवाएं", "activeNow": "अभी सक्रिय",
+    "currentStreak": "वर्तमान स्ट्रीक", "days": "दिन", "medicinePerformance": "दवा का प्रदर्शन", "noMedicinesFound": "कोई दवा नहीं मिली",
+    "historyTitle": "दवा का इतिहास", "historyDesc": "सभी जोड़ी गई दवाएं", "activeLabel": "सक्रिय", "stoppedLabel": "बंद",
+    "added": "जोड़ा गया:", "stopped": "बंद हुआ:", "bestTime": "दवा लेने का सबसे अच्छा समय", "missMostDoses": "आप सबसे ज्यादा दवाएं भूलते हैं",
+    "morning": "सुबह", "afternoon": "दोपहर", "evening": "शाम", "night": "रात",
+    "weeklyPattern": "साप्ताहिक पैटर्न", "weakestDay": "आपका सबसे कमजोर दिन है", "activityTrend": "गतिविधि ट्रेंड", "noData": "कोई डेटा नहीं",
+        "7days": "7 दिन",
+    "30days": "30 दिन",
+    "viewAll": "सभी देखें",
+    "dosesPerDay": "खुराक/दिन"
+  },
+  "history": {
+    "title": "इतिहास लॉग", "report": "रिपोर्ट", "today": "आज", "yesterday": "कल", "dueNow": "अभी लेना है",
+    "syncing": "सिंक हो रहा...", "markTaken": "ली गई", "markMissed": "चूक गई", "noHistory": "अभी कोई इतिहास नहीं।",
+    "noHistoryDesc": "आपका दवा लॉग यहां तारीख के अनुसार दिखाई देगा।", "loadOlder": "पुराना इतिहास देखें", "loading": "लोड हो रहा है...",
+    "exportReport": "रिपोर्ट निर्यात करें", "selectRange": "समय सीमा चुनें:", "last7Days": "पिछले 7 दिन", "last30Days": "पिछले 30 दिन",
+    "shareReport": "रिपोर्ट साझा करें", "saveToDevice": "डिवाइस पर सहेजें"
+  },
+  "records": {
+    "title": "मेडिकल वॉल्ट", "files": "फ़ाइलें", "search": "रिकॉर्ड खोजें...", "noRecords": "कोई रिकॉर्ड नहीं मिला",
+    "delete": "हटाएं", "share": "साझा करें", "save": "सहेजें", "addRecord": "रिकॉर्ड जोड़ें", "addPage": "पृष्ठ जोड़ें",
+    "recordTitle": "शीर्षक", "category": "श्रेणी", "saveRecord": "रिकॉर्ड सहेजें", "uploading": "अपलोड हो रहा है...",
+    "prescription": "प्रिस्क्रिप्शन", "labReport": "लैब रिपोर्ट", "invoice": "बिल", "otherCat": "अन्य",
+     "filesCount": "{{count}} फ़ाइलें",
+    "titlePlaceholder": "जैसे: ब्लड टेस्ट रिपोर्ट",
+    "saveRecordCount": "रिकॉर्ड सहेजें ({{count}} पृष्ठ)",
+    "pageIndicator": "पृष्ठ {{current}} / {{total}}"
+  },
+  "profile": {
+    "title": "प्रोफ़ाइल सेटिंग्स", "email": "ईमेल पता", "emailDesc": "ईमेल सीधे नहीं बदला जा सकता।",
+    "fullName": "पूरा नाम", "age": "उम्र", "gender": "लिंग", "male": "पुरुष", "female": "महिला", "other": "अन्य",
+    "saveChanges": "परिवर्तन सहेजें", "changePassword": "पासवर्ड बदलें", "success": "प्रोफ़ाइल सफलतापूर्वक अपडेट की गई!"
+  },
+  "reminders": {
+    "title": "अनुस्मारक", "upNext": "अगला", "soon": "जल्द", "in": "में", "allClear": "सब ठीक!", "allClearDesc": "दिन भर के लिए कोई अनुस्मारक बाकी नहीं है।",
+    "systemHealth": "सिस्टम स्थिति", "notifications": "सूचनाएं", "activeReady": "चालू और तैयार", "autoSync": "ऑटो सिंक", "backgroundOn": "बैकग्राउंड चालू"
+  },
+  "auth": {
+    "welcomeBack": "वापसी पर स्वागत है", "loginSubtitle": "अपनी स्वास्थ्य यात्रा जारी रखने के लिए साइन इन करें", "email": "ईमेल पता", "password": "पासवर्ड", "forgotPassword": "पासवर्ड भूल गए?", "loginBtn": "साइन इन करें", "dontHaveAccount": "खाता नहीं है?", "register": "साइन अप करें",
+    "createAccount": "खाता बनाएं", "registerSubtitle": "MedMind के साथ अपनी यात्रा शुरू करें", "name": "पूरा नाम", "age": "उम्र", "gender": "लिंग", "passwordMin": "पासवर्ड (न्यूनतम 6 वर्ण)", "confirmPassword": "पासवर्ड की पुष्टि करें", "alreadyHaveAccount": "क्या पहले से खाता है?", "login": "लॉग इन करें"
+  },
+  "more": {
+    "safety": "सुरक्षा और आपातकाल", "medicalRecords": "चिकित्सा रिकॉर्ड", "account": "खाता और सहायता", "logout": "लॉग आउट"
+  },
+  "language": {
+    "select": "भाषा चुनें", "cancel": "रद्द करें"
+  },
+  "ai": {
+    "title": "AI स्वास्थ्य भविष्यवक्ता",
+    "subtitle": "आपकी दवा की आदतों और लक्षणों का उन्नत विश्लेषण।",
+    "checkStatus": "स्वास्थ्य स्थिति जांचें",
+    "symptomPlaceholder": "जैसे: मुझे चक्कर आ रहा है...",
+    "analyzing": "पैटर्न का विश्लेषण...",
+    "analyze": "विश्लेषण करें",
+    "analysisLabel": "विश्लेषण"
+  },
+  "common": {
+    "syncing": "सिंक हो रहा...",
+    "close": "बंद करें",
+    "unknown": "अज्ञात"
+  }
+}

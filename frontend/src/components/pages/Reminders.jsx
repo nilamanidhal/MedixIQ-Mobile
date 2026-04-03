@@ -12,11 +12,13 @@ import {
   Zap, 
   Calendar 
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const Reminders = () => {
   const { medicines, loading,  toggleMuteMedicine } = useMedicines();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [upcomingReminders, setUpcomingReminders] = useState([]);
+  const { t } = useTranslation();
 
   // --- LOGIC (UNCHANGED) ---
   // useEffect(() => {
@@ -132,7 +134,7 @@ if (loading && medicines.length === 0) {
       <div className="bg-green-200 px-6 pt-10 pb-6 rounded-b-[2.5rem] shadow-sm mb-0 sticky top-0 z-20 border-b border-slate-100">
         <div className="flex justify-between items-end">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Reminders</h1>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t('reminders.title')}</h1>
             <p className="text-slate-500 text-sm font-medium">
               {currentTime.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
             </p>
@@ -153,7 +155,7 @@ if (loading && medicines.length === 0) {
           <div className="flex items-center justify-between mb-4 px-1">
             <div className="flex items-center space-x-2">
               <Clock className="text-slate-400" size={20} />
-              <h2 className="text-lg font-bold text-slate-800">Up Next</h2>
+              <h2 className="text-lg font-bold text-slate-800">{t('reminders.upNext')}</h2>
             </div>
             {upcomingReminders.length > 0 && (
               <span className="text-xs font-bold bg-slate-200 text-slate-600 px-2 py-1 rounded-md">
@@ -181,7 +183,7 @@ if (loading && medicines.length === 0) {
                       <div className="flex flex-col items-center justify-center bg-slate-50 w-14 h-14 rounded-2xl border border-slate-100">
                         <span className="text-sm font-bold text-slate-800">{reminder.time}</span>
                         {index === 0 && (
-                          <span className="text-[10px] text-blue-500 font-bold animate-pulse">SOON</span>
+                          <span className="text-[10px] text-blue-500 font-bold animate-pulse">{t('reminders.soon')}</span>
                         )}
                       </div>
                       
@@ -200,7 +202,7 @@ if (loading && medicines.length === 0) {
                     <div className="flex flex-col items-end space-y-2">
                       {/* Countdown Badge */}
                       <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wide shadow-sm ${getPriorityStyle(reminder.hoursUntil, reminder.minutesUntil)}`}>
-                        IN {formatTimeUntil(reminder.hoursUntil, reminder.minutesUntil)}
+                        {t('reminders.in')} {formatTimeUntil(reminder.hoursUntil, reminder.minutesUntil)}
                       </span>
 
                       {/* Mute Button */}
@@ -225,55 +227,12 @@ if (loading && medicines.length === 0) {
               <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 text-blue-400">
                 <CheckCircle2 size={32} />
               </div>
-              <h3 className="text-lg font-bold text-slate-800">All Clear!</h3>
+              <h3 className="text-lg font-bold text-slate-800">{t('reminders.allClear')}</h3>
               <p className="text-slate-400 text-sm text-center max-w-[200px] mt-1">
-                You have no pending reminders for the rest of the day.
+                {t('reminders.allClearDesc')}
               </p>
             </div>
           )}
-        </div>
-
-        {/* --- SYSTEM STATUS (Grid Layout) --- */}
-        <div>
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-1 flex items-center gap-2">
-            <Zap size={14} /> System Health
-          </h3>
-          
-          <div className="grid grid-cols-2 gap-4">
-            {/* Notification Status */}
-            <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100 flex flex-col justify-between h-28 relative overflow-hidden">
-              <div className="absolute right-[-10px] top-[-10px] bg-emerald-100 w-16 h-16 rounded-full opacity-50 blur-xl"></div>
-              
-              <div className="flex justify-between items-start z-10">
-                <div className="p-2 bg-white rounded-xl shadow-sm text-emerald-600">
-                  <Bell size={20} />
-                </div>
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-              </div>
-              
-              <div className="z-10">
-                <p className="text-xs font-bold text-emerald-900">Notifications</p>
-                <p className="text-[10px] text-emerald-600 font-medium">Active & Ready</p>
-              </div>
-            </div>
-            
-            {/* Sync Status */}
-            <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 flex flex-col justify-between h-28 relative overflow-hidden">
-              <div className="absolute right-[-10px] top-[-10px] bg-indigo-100 w-16 h-16 rounded-full opacity-50 blur-xl"></div>
-
-              <div className="flex justify-between items-start z-10">
-                <div className="p-2 bg-white rounded-xl shadow-sm text-indigo-600">
-                  <RefreshCw size={20} />
-                </div>
-                <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-              </div>
-              
-              <div className="z-10">
-                <p className="text-xs font-bold text-indigo-900">Auto Sync</p>
-                <p className="text-[10px] text-indigo-600 font-medium">Background On</p>
-              </div>
-            </div>
-          </div>
         </div>
 
       </div>

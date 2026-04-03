@@ -13,8 +13,10 @@ import {
     Download, 
     Share2 
 } from "lucide-react";
+import { useTranslation } from 'react-i18next';
 
 const HistorySection = () => {
+    const { t } = useTranslation();
     const { logs, medicines, updateLogStatus, fetchFullHistory } = useMedicines();
     const { user } = useAuth();
 
@@ -96,7 +98,7 @@ const HistorySection = () => {
             {/* Header */}
             <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
                 <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <Clock className="text-blue-500" size={20} /> History Log
+                    <Clock className="text-blue-500" size={20} /> {t('history.title')}
                 </h2>
                 {/* 🟢 OPEN MODAL BUTTON */}
                 <button 
@@ -109,7 +111,7 @@ const HistorySection = () => {
                     ) : (
                          <FileText size={14} />
                     )}
-                    Report
+                    {t('history.report')}
                 </button>
             </div>
 
@@ -141,16 +143,16 @@ const HistorySection = () => {
                                                 
                                                 <div>
                                                     <p className={`font-semibold text-sm ${isPending ? 'text-slate-900' : 'text-slate-700'}`}>
-                                                        {log.medicineId?.name || "Unknown Medicine"}
+                                                        {log.medicineId?.name || t('common.unknown')}
                                                         {log.pendingSync && (
                                                             <span className="ml-2 text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
-                                                                Syncing...
+                                                                {t('common.syncing')}
                                                             </span>
                                                         )}
                                                     </p>
                                                     <p className="text-xs text-slate-400 mt-0.5 font-medium flex items-center">
                                                         {log.time} 
-                                                        {isPending && <span className="ml-1 text-orange-500 font-bold">• Due Now</span>}
+                                                        {isPending && <span className="ml-1 text-orange-500 font-bold">• {t('history.dueNow')}</span>}
                                                     </p>
                                                 </div>
                                             </div>
@@ -162,14 +164,14 @@ const HistorySection = () => {
                                                         <button 
                                                             onClick={() => updateLogStatus(log._id, 'taken')} 
                                                             className="w-9 h-9 rounded-full bg-green-100 text-green-600 flex items-center justify-center hover:bg-green-200 active:scale-90 transition-all shadow-sm"
-                                                            title="Mark Taken"
+                                                            title={t('history.markTaken')}
                                                         >
                                                             <Check size={18} strokeWidth={3} />
                                                         </button>
                                                         <button 
                                                             onClick={() => updateLogStatus(log._id, 'missed')} 
                                                             className="w-9 h-9 rounded-full bg-red-100 text-red-600 flex items-center justify-center hover:bg-red-200 active:scale-90 transition-all shadow-sm"
-                                                            title="Mark Missed"
+                                                            title={t('history.markMissed')}
                                                         >
                                                             <X size={18} strokeWidth={3} />
                                                         </button>
@@ -198,9 +200,9 @@ const HistorySection = () => {
                     <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
                         <Calendar className="text-slate-300" size={32} />
                     </div>
-                    <p className="text-slate-500 font-medium">No history yet.</p>
+                    <p className="text-slate-500 font-medium">{t('history.noHistory')}</p>
                     <p className="text-slate-400 text-xs mt-1 max-w-[200px]">
-                        Your medication logs will appear here organized by date.
+                        {t('history.noHistoryDesc')}
                     </p>
                 </div>
             )}
@@ -213,10 +215,10 @@ const HistorySection = () => {
                     className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center justify-center gap-1 w-full py-2"
                 >
                     {loadingMore ? (
-                        <span className="animate-pulse">Loading...</span>
+                        <span className="animate-pulse">{t('common.loading')}</span>
                     ) : (
                         <>
-                            Load Older History <ChevronDown size={14} />
+                            {t('history.loadOlder')} <ChevronDown size={14} />
                         </>
                     )}
                 </button>
@@ -228,13 +230,13 @@ const HistorySection = () => {
                     <div className="bg-white w-full max-w-sm rounded-2xl p-5 shadow-2xl animate-in slide-in-from-bottom-10 duration-300">
                         
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-bold text-slate-800">Export Report</h3>
+                            <h3 className="text-lg font-bold text-slate-800">{t('history.exportReport')}</h3>
                             <button onClick={() => setShowReportModal(false)} className="text-slate-400 hover:text-slate-600">
                                 <X size={20} />
                             </button>
                         </div>
                         
-                        <p className="text-sm text-slate-500 mb-4 font-medium">Select time range:</p>
+                        <p className="text-sm text-slate-500 mb-4 font-medium">{t('history.selectRange')}</p>
                         
                         <div className="grid grid-cols-2 gap-3 mb-6">
                             <button 
@@ -245,7 +247,7 @@ const HistorySection = () => {
                                     : 'bg-white border-slate-200 text-slate-600'
                                 }`}
                             >
-                                Last 7 Days
+                                {t('history.last7Days')}
                             </button>
                             <button 
                                 onClick={() => setReportDays(30)}
@@ -255,7 +257,7 @@ const HistorySection = () => {
                                     : 'bg-white border-slate-200 text-slate-600'
                                 }`}
                             >
-                                Last 30 Days
+                                {t('history.last30Days')}
                             </button>
                         </div>
 
@@ -265,7 +267,7 @@ const HistorySection = () => {
                                 onClick={() => triggerExport('share')}
                                 className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
                             >
-                                <Share2 size={18} /> Share Report
+                                <Share2 size={18} /> {t('history.shareReport')}
                             </button>
                             
                             {/* DOWNLOAD BUTTON */}
@@ -273,7 +275,7 @@ const HistorySection = () => {
                                 onClick={() => triggerExport('download')}
                                 className="w-full py-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-slate-50"
                             >
-                                <Download size={18} /> Save to Device
+                                <Download size={18} /> {t('history.saveToDevice')}
                             </button>
                         </div>
 

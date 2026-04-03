@@ -11,6 +11,7 @@ import {
   Loader2, 
   Activity 
 } from "lucide-react";
+import { useTranslation } from 'react-i18next';
 
 const Register = ({ onSwitchToLogin }) => {
   const [formData, setFormData] = useState({
@@ -22,6 +23,8 @@ const Register = ({ onSwitchToLogin }) => {
   
   const { register } = useAuth();
   const navigate = useNavigate();
+
+  const { t } = useTranslation();
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -72,11 +75,11 @@ const Register = ({ onSwitchToLogin }) => {
             <Activity className="h-6 w-6 text-white" />
           </div>
           <h2 className="text-2xl font-extrabold text-slate-900">
-            Create Account
+           {t('auth.createAccount')}
           </h2>
         </div>
         <p className="text-slate-500 font-medium ml-1">
-          Start your journey with MedMind
+          {t('auth.registerSubtitle')}
         </p>
       </div>
 
@@ -99,7 +102,7 @@ const Register = ({ onSwitchToLogin }) => {
             <input
               name="name" type="text" required value={formData.name} onChange={handleChange}
               className="block w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
-              placeholder="Full Name"
+              placeholder={t('auth.name')}
             />
           </div>
 
@@ -111,7 +114,7 @@ const Register = ({ onSwitchToLogin }) => {
             <input
               name="email" type="email" required value={formData.email} onChange={handleChange}
               className="block w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
-              placeholder="Email Address"
+              placeholder={t('auth.email')}
             />
           </div>
 
@@ -124,7 +127,7 @@ const Register = ({ onSwitchToLogin }) => {
               <input
                 name="age" type="number" min="1" max="120" required value={formData.age} onChange={handleChange}
                 className="block w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
-                placeholder="Age"
+                placeholder={t('auth.age')}
               />
             </div>
 
@@ -133,10 +136,10 @@ const Register = ({ onSwitchToLogin }) => {
                 name="gender" required value={formData.gender} onChange={handleChange}
                 className="block w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-600 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium appearance-none"
               >
-                <option value="" disabled>Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
+                <option value="" disabled>{t('auth.gender')}</option>
+                <option value="male">{t('auth.male')}</option>
+                <option value="female">{t('auth.female')}</option>
+                <option value="other">{t('auth.other')}</option>
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
@@ -152,7 +155,7 @@ const Register = ({ onSwitchToLogin }) => {
             <input
               name="password" type={showPassword ? "text" : "password"} required minLength="6" value={formData.password} onChange={handleChange}
               className="block w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
-              placeholder="Password (min 6 chars)"
+              placeholder={t('auth.passwordMin')}
             />
             <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-4 flex items-center">
               {showPassword ? <EyeOff className="h-6 w-6 text-slate-400" /> : <Eye className="h-6 w-6 text-slate-400" />}
@@ -167,7 +170,7 @@ const Register = ({ onSwitchToLogin }) => {
             <input
               name="confirmPassword" type="password" required minLength="6" value={formData.confirmPassword} onChange={handleChange}
               className="block w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
-              placeholder="Confirm Password"
+              placeholder={t('auth.confirmPassword')}
             />
           </div>
 
@@ -175,16 +178,16 @@ const Register = ({ onSwitchToLogin }) => {
             type="submit" disabled={loading}
             className="w-full mt-6 bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 flex justify-center items-center gap-2 text-lg active:scale-95 transition-transform disabled:opacity-70 disabled:active:scale-100"
           >
-            {loading ? <Loader2 className="animate-spin h-6 w-6" /> : 'Create Account'}
+            {loading ? <Loader2 className="animate-spin h-6 w-6" /> : t('auth.createAccount')}
           </button>
         </form>
 
         {/* --- FOOTER --- */}
         <div className="mt-8 text-center pb-4">
           <p className="text-slate-500 font-medium">
-            Already have an account?{' '}
+            {t('auth.alreadyHaveAccount')}?{' '}
             <button onClick={onSwitchToLogin} className="font-bold text-blue-600 active:scale-95 transition-transform">
-              Log in
+            {t('auth.login')}
             </button>
           </p>
         </div>

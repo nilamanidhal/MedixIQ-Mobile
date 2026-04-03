@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { ArrowLeft, Save, User as UserIcon } from 'lucide-react';
 import LoadingSpinner from '../LoadingSpinner'; // Adjust path if needed
+import { useTranslation } from 'react-i18next';
 
 const ProfileSettings = () => {
     const { user, token, API_BASE_URL } = useAuth();
@@ -18,6 +19,7 @@ const ProfileSettings = () => {
         age: '',
         gender: 'other'
     });
+    const { t } = useTranslation();
 
     // Populate form with existing user data when component loads
     useEffect(() => {
@@ -77,7 +79,7 @@ const ProfileSettings = () => {
                         <ArrowLeft size={24} />
                     </button>
                     <h1 className="text-xl font-bold flex items-center gap-2">
-                        <UserIcon /> Profile Settings
+                        <UserIcon /> {t('profile.title')}
                     </h1>
                 </div>
             </div>
@@ -93,18 +95,18 @@ const ProfileSettings = () => {
                     
                     {/* Email - Disabled because backend doesn't support changing it via this route */}
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">Email Address</label>
+                        <label className="block text-sm font-bold text-slate-700 mb-1">{t('profile.email')}</label>
                         <input 
                             type="email" 
                             value={formData.email} 
                             disabled 
                             className="w-full p-3 bg-slate-100 text-slate-500 rounded-xl border border-slate-200 cursor-not-allowed" 
                         />
-                        <p className="text-xs text-slate-400 mt-1">Email cannot be changed directly.</p>
+                        <p className="text-xs text-slate-400 mt-1">{t('profile.emailDesc')}</p>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">Full Name</label>
+                        <label className="block text-sm font-bold text-slate-700 mb-1">{t('profile.fullName')}</label>
                         <input 
                             type="text" 
                             name="name"
@@ -118,7 +120,7 @@ const ProfileSettings = () => {
 
                     <div className="flex gap-4">
                         <div className="flex-1">
-                            <label className="block text-sm font-bold text-slate-700 mb-1">Age</label>
+                            <label className="block text-sm font-bold text-slate-700 mb-1">{t('profile.age')}</label>
                             <input 
                                 type="number" 
                                 name="age"
@@ -132,7 +134,7 @@ const ProfileSettings = () => {
                         </div>
 
                         <div className="flex-1">
-                            <label className="block text-sm font-bold text-slate-700 mb-1">Gender</label>
+                            <label className="block text-sm font-bold text-slate-700 mb-1">{t('profile.gender')}</label>
                             <select 
                                 name="gender"
                                 value={formData.gender} 
@@ -151,7 +153,7 @@ const ProfileSettings = () => {
                         disabled={saving}
                         className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-md flex items-center justify-center gap-2 mt-4 active:scale-95 transition-transform disabled:opacity-70"
                     >
-                        {saving ? <LoadingSpinner size={24} color="white" /> : <><Save size={20} /> Save Changes</>}
+                        {saving ? <LoadingSpinner size={24} color="white" /> : <><Save size={20} /> {t('profile.saveChanges')}</>}
                     </button>
 
                     <div className="pt-4 border-t border-slate-100 mt-4">
@@ -162,7 +164,7 @@ const ProfileSettings = () => {
                         onClick={() => navigate('/change-password')}
                         className="w-full bg-slate-100 text-slate-700 font-bold py-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-slate-200"
                     >
-                        Change Password
+                        {t('profile.changePassword')}
                     </button>
                 </div>
 

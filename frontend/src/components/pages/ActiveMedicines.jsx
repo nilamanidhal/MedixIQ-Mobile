@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useMedicines } from '../../hooks/useMedicines'; // Adjust path if needed (../../hooks)
 import MedicineList from '../medicines/MedicineList';     // Adjust path to components/medicines
 import MedicineForm from '../medicines/MedicineForm';     // Adjust path to components/medicines
+import { useTranslation } from 'react-i18next';
 
 const ActiveMedicines = () => {
   const { fetchMedicines } = useMedicines();
   const [isAdding, setIsAdding] = useState(false);
   const [editingMedicine, setEditingMedicine] = useState(null);
+  const { t } = useTranslation();
 
   // // 1. Refresh data when entering this page
   // useEffect(() => {
@@ -37,12 +39,12 @@ const ActiveMedicines = () => {
       <div className="bg-green-200 px-6 pt-10 pb-6 rounded-b-[2.5rem] shadow-sm mb-0 sticky top-0 z-20 border-b border-slate-100">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">My Medicines</h1>
-            <p className="text-slate-500 text-sm font-medium">Manage dosages & schedules</p>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t('medicines.title')}</h1>
+            <p className="text-slate-500 text-sm font-medium">{t('medicines.subtitle')}</p>
           </div>
           {/* Optional: Status Indicator */}
           <div className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-bold">
-            Active
+            {t('medicines.active')}
           </div>
         </div>
       </div>
@@ -54,7 +56,7 @@ const ActiveMedicines = () => {
           <div className="bg-white rounded-2xl shadow-lg p-1 animate-fade-in-up">
             <div className="p-4 border-b border-gray-100 flex justify-between items-center">
                 <h2 className="text-lg font-bold text-gray-800">
-                    {editingMedicine ? 'Edit Medicine' : 'Add New Medicine'}
+                    {editingMedicine ? t('medicines.form.editMedicine') : t('medicines.form.newMedicine')}
                 </h2>
                 <button onClick={closeForm} className="text-gray-400 hover:text-gray-600 text-2xl">
                     &times;

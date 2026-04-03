@@ -9,13 +9,15 @@ import {
   Loader2, 
   Activity 
 } from "lucide-react";
+import { useTranslation } from 'react-i18next';
 
 const Login = ({ onSwitchToRegister }) => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
+  const { t } = useTranslation();
+
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -47,10 +49,10 @@ const Login = ({ onSwitchToRegister }) => {
           <Activity className="h-8 w-8 text-white" />
         </div>
         <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-          Welcome Back
+         {t('auth.welcomeBack')}
         </h2>
         <p className="mt-2 text-slate-500 font-medium">
-          Sign in to continue your health journey
+          {t('auth.loginSubtitle')}
         </p>
       </div>
 
@@ -80,7 +82,7 @@ const Login = ({ onSwitchToRegister }) => {
               value={formData.email}
               onChange={handleChange}
               className="block w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-base font-medium"
-              placeholder="Email Address"
+              placeholder={t('auth.email')}
             />
           </div>
 
@@ -96,7 +98,7 @@ const Login = ({ onSwitchToRegister }) => {
               value={formData.password}
               onChange={handleChange}
               className="block w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-base font-medium"
-              placeholder="Password"
+              placeholder={t('auth.password')}
             />
             <button
               type="button"
@@ -109,7 +111,7 @@ const Login = ({ onSwitchToRegister }) => {
 
           <div className="flex justify-end pt-2">
             <Link to="/forgot-password" className="text-sm font-bold text-blue-600 hover:text-blue-700 active:scale-95 transition-all">
-              Forgot password?
+              {t('auth.forgotPassword')}
             </Link>
           </div>
 
@@ -119,16 +121,16 @@ const Login = ({ onSwitchToRegister }) => {
             disabled={loading}
             className="w-full mt-8 bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 flex justify-center items-center gap-2 text-lg active:scale-95 transition-transform disabled:opacity-70 disabled:active:scale-100"
           >
-            {loading ? <Loader2 className="animate-spin h-6 w-6" /> : 'Sign In'}
+            {loading ? <Loader2 className="animate-spin h-6 w-6" /> : t('auth.loginBtn')}
           </button>
         </form>
 
         {/* --- FOOTER (Pushed to bottom) --- */}
         <div className="mt-auto pt-8 text-center pb-4">
           <p className="text-slate-500 font-medium">
-            Don't have an account?{' '}
+            {t('auth.dontHaveAccount')}?{' '}
             <button onClick={onSwitchToRegister} className="font-bold text-blue-600 active:scale-95 transition-transform">
-              Sign up
+              {t('auth.register')}
             </button>
           </p>
         </div>

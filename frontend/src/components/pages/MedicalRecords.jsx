@@ -10,8 +10,10 @@ import {
     Camera as CameraIcon, Files, Download, Share2, 
     ChevronLeft, ChevronRight, Maximize2 
 } from "lucide-react";
+import { useTranslation } from 'react-i18next';
 
 const MedicalRecords = () => {
+    const { t } = useTranslation();
     const { token, API_BASE_URL } = useAuth();
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -156,16 +158,16 @@ const MedicalRecords = () => {
             {/* --- HEADER --- */}
             <div className="bg-white px-6 pt-10 pb-4 sticky top-0 z-10 border-b border-slate-100 shadow-sm">
                 <div className="flex justify-between items-center mb-4">
-                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Medical Vault</h1>
+                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t('records.title')}</h1>
                     <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold">
-                        {reports.length} Files
+                        {t('records.filesCount', {count: reports.length})}
                     </span>
                 </div>
                 <div className="relative">
                     <Search className="absolute left-3 top-3 text-slate-400" size={18} />
                     <input 
                         type="text" 
-                        placeholder="Search records..." 
+                        placeholder={t('records.search')} 
                         className="w-full bg-slate-100 pl-10 pr-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-700"
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
@@ -207,7 +209,7 @@ const MedicalRecords = () => {
             {filteredReports.length === 0 && !loading && (
                 <div className="flex flex-col items-center justify-center py-20 opacity-50">
                     <FileText size={48} className="text-slate-300 mb-2" />
-                    <p className="text-slate-400 text-sm">No records found</p>
+                    <p className="text-slate-400 text-sm">{t('records.noRecords')}</p>
                 </div>
             )}
 
@@ -230,8 +232,7 @@ const MedicalRecords = () => {
                         <div>
                             <h2 className="font-bold text-lg">{viewReport.title}</h2>
                             <p className="text-xs text-slate-300">
-                                Page {activePageIndex + 1} of {viewReport.pages.length} • {new Date(viewReport.date).toLocaleDateString()}
-                            </p>
+                    {t('records.pageIndicator', { current: activePageIndex + 1, total: viewReport.pages.length })} • {new Date(viewReport.date).toLocaleDateString()}                            </p>
                         </div>
                         <button onClick={closeViewer} className="bg-white/10 p-2 rounded-full hover:bg-white/20">
                             <X size={24} />
@@ -293,12 +294,12 @@ const MedicalRecords = () => {
                         <div className="flex justify-around items-center border-t border-white/10 pt-4">
                             <button onClick={() => handleDelete(viewReport._id)} className="flex flex-col items-center text-red-400 gap-1 active:scale-95">
                                 <Trash2 size={20} />
-                                <span className="text-[10px]">Delete</span>
+                                <span className="text-[10px]">{t('common.delete')}</span>
                             </button>
                             
                             <button onClick={handleShare} className="flex flex-col items-center text-blue-400 gap-1 active:scale-95">
                                 <Share2 size={20} />
-                                <span className="text-[10px]">Share</span>
+                                <span className="text-[10px]">{t('records.share')}</span>
                             </button>
                             
                             <button 
@@ -306,7 +307,7 @@ const MedicalRecords = () => {
                                 className="flex flex-col items-center text-emerald-400 gap-1 active:scale-95"
                             >
                                 <Download size={20} />
-                                <span className="text-[10px]">Save</span>
+                                <span className="text-[10px]">{t('records.save')}</span>
                             </button>
                         </div>
                     </div>
@@ -318,7 +319,7 @@ const MedicalRecords = () => {
                 <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
                     <div className="bg-white w-full max-w-md mb-4 rounded-3xl p-6 animate-in slide-in-from-bottom-10 h-[80vh] flex flex-col shadow-2xl">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-bold text-slate-900">Add Record</h2>
+                            <h2 className="text-xl font-bold text-slate-900">t('records.addRecord')</h2>
                             <button onClick={() => setShowUploadModal(false)} className="bg-slate-100 p-2 rounded-full hover:bg-slate-200">
                                 <X size={20} />
                             </button>
@@ -328,7 +329,7 @@ const MedicalRecords = () => {
                             <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-hide">
                                 <div onClick={addPage} className="flex-shrink-0 w-24 h-32 bg-slate-50 border-2 border-dashed border-blue-300 rounded-xl flex flex-col items-center justify-center cursor-pointer active:bg-blue-50 text-blue-500">
                                     <CameraIcon size={24} className="mb-1" />
-                                    <span className="text-[10px] font-bold">Add Page</span>
+                                    <span className="text-[10px] font-bold">{t('records.addPage')}</span>
                                 </div>
                                 {newReport.previews.map((src, idx) => (
                                     <div key={idx} className="flex-shrink-0 w-24 h-32 bg-slate-100 rounded-xl overflow-hidden relative shadow-sm border border-slate-100">
@@ -340,12 +341,12 @@ const MedicalRecords = () => {
                             </div>
                             
                             <div className="space-y-3">
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">Title</label>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">{t('records.recordTitle')}</label>
                                 <input type="text" placeholder="e.g. Blood Test Report" className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl focus:outline-none focus:border-blue-500 focus:bg-white transition-all text-sm font-medium" value={newReport.title} onChange={e => setNewReport({...newReport, title: e.target.value})} />
                             </div>
 
                             <div className="space-y-3">
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">Category</label>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">{t('records.category')}</label>
                                 <div className="grid grid-cols-2 gap-3">
                                     {['Prescription', 'Lab Report', 'Invoice', 'Other'].map(cat => (
                                         <button type="button" key={cat} onClick={() => setNewReport({...newReport, category: cat})} className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all active:scale-95 ${newReport.category === cat ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-200' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>{cat}</button>
@@ -356,7 +357,7 @@ const MedicalRecords = () => {
 
                         <div className="mt-4 pt-4 border-t border-slate-100 bg-white">
                             <button onClick={handleUpload} disabled={uploading || newReport.images.length === 0} className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-200 active:scale-95 transition-all flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed">
-                                {uploading ? <><UploadCloud className="mr-2 animate-bounce" size={20} /> Uploading...</> : `Save Record (${newReport.images.length} Pages)`}
+                                {uploading ? <><UploadCloud className="mr-2 animate-bounce" size={20} /> {t('records.uploading')}</> : t('records.saveRecordCount', { count: newReport.images.length })}
                             </button>
                         </div>
                     </div>

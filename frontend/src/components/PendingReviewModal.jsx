@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { X, Check, Clock, AlertCircle, Loader2 } from "lucide-react";
+import { useTranslation } from 'react-i18next';
 
 const PendingReviewModal = ({ logs, onAction, onClose }) => {
+    const { t } = useTranslation();
   // Track IDs processed in this session to hide them immediately
   const [processingIds, setProcessingIds] = useState(new Set());
 
@@ -44,10 +46,10 @@ const PendingReviewModal = ({ logs, onAction, onClose }) => {
                 <div>
                     <h2 className="text-xl font-bold flex items-center gap-2">
                         <Clock className="text-blue-200" size={24} />
-                        Daily Review
+                        {t('review.title')}
                     </h2>
                     <p className="text-blue-100 text-sm mt-1">
-                        You have {visibleLogs.length} pending meds.
+                       {t('review.pending', { count: visibleLogs.length })}
                     </p>
                 </div>
                 <button 
@@ -72,15 +74,15 @@ const PendingReviewModal = ({ logs, onAction, onClose }) => {
                         <div className="flex justify-between items-start">
                             <div>
                                 <h3 className="font-bold text-slate-800 text-lg">
-                                    {log.medicineId?.name || "Medicine"}
+                                    {log.medicineId?.name || t('medicines.name')}
                                 </h3>
                                 <div className="flex items-center gap-2 text-xs font-medium mt-1">
                                     <span className="text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                                        {log.medicineId?.dose || log.dose || "Dose"}
+                                        {log.medicineId?.dose || log.dose || t('medicines.dose')}
                                     </span>
                                     <span className="text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 flex items-center">
                                         <AlertCircle size={10} className="mr-1"/>
-                                        Scheduled: {log.time}
+                                        {t('review.scheduled', { time: log.time })}
                                     </span>
                                 </div>
                             </div>
@@ -93,14 +95,14 @@ const PendingReviewModal = ({ logs, onAction, onClose }) => {
                                 disabled={isProcessing}
                                 className="flex items-center justify-center py-2.5 rounded-xl bg-red-50 text-red-600 font-bold text-sm active:scale-95 transition-transform hover:bg-red-100 disabled:opacity-70"
                             >
-                                {isProcessing ? <Loader2 size={18} className="animate-spin" /> : <><X size={18} className="mr-1.5" /> Missed</>}
+                                {isProcessing ? <Loader2 size={18} className="animate-spin" /> : <><X size={18} className="mr-1.5" /> {t('review.missed')}</>}
                             </button>
                             <button 
                                 onClick={() => handleActionClick(log._id, 'taken')}
                                 disabled={isProcessing}
                                 className="flex items-center justify-center py-2.5 rounded-xl bg-emerald-500 text-white font-bold text-sm shadow-lg shadow-emerald-200 active:scale-95 transition-transform hover:bg-emerald-600 disabled:bg-emerald-300"
                             >
-                                {isProcessing ? <Loader2 size={18} className="animate-spin text-white" /> : <><Check size={18} className="mr-1.5" /> Taken</>}
+                                {isProcessing ? <Loader2 size={18} className="animate-spin text-white" /> : <><Check size={18} className="mr-1.5" /> {t('review.taken')}</>}
                             </button>
                         </div>
 
@@ -112,7 +114,7 @@ const PendingReviewModal = ({ logs, onAction, onClose }) => {
         {/* Footer - Fixed */}
         <div className="p-4 bg-white border-t border-slate-100 text-center flex-shrink-0">
             <button onClick={onClose} className="text-slate-400 text-xs font-medium hover:text-slate-600">
-                Remind me later
+                {t('review.remindLater')}
             </button>
         </div>
 

@@ -9,6 +9,7 @@ import { Check, AlertCircle, Clock, Circle } from "lucide-react";
 import PendingReviewModal from './PendingReviewModal';
 import AiChatbot from './AiChatbot';
 import ProfilePopup from './ProfilePopup';
+import { useTranslation } from 'react-i18next';
 
 
 // Helper to open settings
@@ -36,6 +37,7 @@ const formatTimeSafe = (dateObj) => {
 };
 
 const Dashboard = () => {
+    const { t } = useTranslation();
     const { user } = useAuth();
     
     // Get data and actions from hook
@@ -303,9 +305,9 @@ if (loading && medicines.length === 0) {
                 <div className="flex justify-between items-start">
                     <div>
                         <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight">
-                            Hi, {user?.name?.split(' ')[0] || 'Friend'}!
+                           {t('dashboard.greeting', { name: user?.name?.split(' ')[0] || 'Friend' })}
                         </h1>
-                        <p className="text-slate-500 text-sm mt-1 font-medium">Let's stay healthy today.</p>
+                        <p className="text-slate-500 text-sm mt-1 font-medium">{t('dashboard.subtitle')}</p>
                     </div>
 
                     {/* 🟢 CLICKABLE PROFILE AVATAR */}
@@ -356,11 +358,10 @@ if (loading && medicines.length === 0) {
                 {/* Daily Progress */}
                 <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 flex items-center justify-between relative overflow-hidden">
                     <div className="z-10">
-                        <h3 className="font-bold text-slate-700 text-lg">Daily Goal</h3>
+                        <h3 className="font-bold text-slate-700 text-lg">{t('dashboard.dailyGoal')}</h3>
                         <p className="text-slate-400 text-xs mt-1 font-medium">
-                            <span className="font-bold text-blue-600 text-xl">{todayStats.taken}</span> 
-                            <span className="text-slate-400 mx-1">/</span> 
-                            {todayStats.total} doses taken
+                            <span className="font-bold text-blue-600 text-xl">{todayStats.taken}</span> / {todayStats.total} 
+                           {t('dashboard.dosesTaken', { taken: todayStats.taken, total: todayStats.total })}
                         </p>
                     </div>
                     <div className="relative w-16 h-16 z-10">
@@ -377,7 +378,7 @@ if (loading && medicines.length === 0) {
                 {/* UP NEXT */}
                 <div className="bg-gradient-to-br from-indigo-600 to-blue-600 rounded-3xl p-6 text-white shadow-lg shadow-blue-200/50 flex justify-between items-center relative overflow-hidden">
                     <div className="z-10">
-                        <p className="text-blue-100 text-[10px] font-bold uppercase tracking-widest mb-1">UP NEXT</p>
+                        <p className="text-blue-100 text-[10px] font-bold uppercase tracking-widest mb-1">{t('dashboard.upNext')}</p>
                         {nextDose ? (
                             <>
                                 <p className="text-2xl font-bold tracking-tight">{nextDose.name}</p>
@@ -391,8 +392,8 @@ if (loading && medicines.length === 0) {
                             </>
                         ) : (
                             <>
-                                <p className="text-2xl font-bold tracking-tight">All Caught Up!</p>
-                                <p className="text-blue-100 text-xs mt-1">No pending meds.</p>
+                                <p className="text-2xl font-bold tracking-tight">{t('dashboard.allCaughtUp')}</p>
+                                <p className="text-blue-100 text-xs mt-1"><p>{t('dashboard.noPending')}</p></p>
                             </>
                         )}
                     </div>
@@ -404,7 +405,7 @@ if (loading && medicines.length === 0) {
                {/* SCHEDULE (READ ONLY) */}
                 <div>
                     <div className="flex justify-between items-end mb-4 px-1">
-                        <h3 className="font-bold text-slate-800 text-lg">Today's Schedule</h3>
+                        <h3 className="font-bold text-slate-800 text-lg">{t('dashboard.todaySchedule')}</h3>
                     </div>
                     
                     {todaysDoses.length === 0 ? (

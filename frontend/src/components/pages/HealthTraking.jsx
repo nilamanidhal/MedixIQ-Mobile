@@ -11,10 +11,12 @@ import {
 import { 
   Activity, Pill, CheckCircle, BarChart3, CalendarDays, X, Clock, Flame 
 } from "lucide-react";
+import { useTranslation } from 'react-i18next';
 
 // --- HISTORY MODAL (Shows All Meds) ---
 const MedicineHistoryModal = ({ isOpen, onClose }) => {
-    const { token, API_BASE_URL } = useAuth();
+  const { t } = useTranslation();  
+  const { token, API_BASE_URL } = useAuth();
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -40,8 +42,8 @@ const MedicineHistoryModal = ({ isOpen, onClose }) => {
             <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
                 <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
                     <div>
-                        <h2 className="text-lg font-bold text-slate-800">Medicine History</h2>
-                        <p className="text-xs text-slate-400">All medicines ever added</p>
+                        <h2 className="text-lg font-bold text-slate-800">{t('health.historyTitle')}</h2>
+                        <p className="text-xs text-slate-400">{t('health.historyDesc')}</p>
                     </div>
                     <button onClick={onClose} className="p-2 bg-slate-50 rounded-full hover:bg-slate-100">
                         <X size={20} className="text-slate-500" />
@@ -60,12 +62,12 @@ const MedicineHistoryModal = ({ isOpen, onClose }) => {
                                         <p className="text-xs text-slate-400 font-medium">{med.dose}</p>
                                     </div>
                                     <span className={`text-[10px] font-bold px-2 py-1 rounded-md ${med.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>
-                                        {med.isActive ? 'ACTIVE' : 'STOPPED'}
+                                        {med.isActive ? t('health.activeLabel') : t('health.stoppedLabel')}
                                     </span>
                                 </div>
                                 <div className="mt-3 flex items-center gap-4 text-[11px] text-slate-400 font-medium border-t border-slate-50 pt-2">
                                     <span className="flex items-center gap-1"><CalendarDays size={12}/> Added: {new Date(med.createdAt).toLocaleDateString()}</span>
-                                    {!med.isActive && <span>Stopped: {new Date(med.updatedAt).toLocaleDateString()}</span>}
+                                    {!med.isActive && <span>{t('health.stopped')} {new Date(med.updatedAt).toLocaleDateString()}</span>}
                                 </div>
                             </div>
                         ))
@@ -78,20 +80,21 @@ const MedicineHistoryModal = ({ isOpen, onClose }) => {
 
 // --- NEW COMPONENT: TIME ANALYSIS CARD ---
 const TimeAnalysisCard = ({ worstSlot, timeSlots }) => {
+  const { t } = useTranslation();
     const slots = [
-        { key: 'morning', label: 'Morning', icon: '🌅', time: '6-12' },
-        { key: 'afternoon', label: 'Afternoon', icon: '☀️', time: '12-4' },
-        { key: 'evening', label: 'Evening', icon: '🌆', time: '4-8' },
-        { key: 'night', label: 'Night', icon: '🌙', time: '8-12' },
+       { key: 'morning', label: t('health.morning'), icon: '🌅' },
+        { key: 'afternoon', label: t('health.afternoon'), icon: '☀️' },
+        { key: 'evening', label: t('health.evening'), icon: '🌆' },
+        { key: 'night', label: t('health.night'), icon: '🌙' },
     ];
     return (
         <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
             <h3 className="text-sm font-bold text-slate-800 mb-1 flex items-center gap-2">
-                <Clock size={16} className="text-purple-500" /> Best Time to Take Meds
+                <Clock size={16} className="text-purple-500" /> {t('health.bestTime')}
             </h3>
             {worstSlot && (
                 <p className="text-xs text-red-500 font-medium mb-3">
-                    ⚠️ You miss most doses in the {worstSlot}
+                    ⚠️ {t('health.missMostDoses')} {t(`health.${worstSlot}`)}
                 </p>
             )}
             <div className="grid grid-cols-4 gap-2">
@@ -116,38 +119,44 @@ const TimeAnalysisCard = ({ worstSlot, timeSlots }) => {
 };
 
 // --- NEW COMPONENT: WEEKLY PATTERN CARD ---
-const WeeklyPatternCard = ({ pattern, worstDay }) => (
-    <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-        <h3 className="text-sm font-bold text-slate-800 mb-1 flex items-center gap-2">
-            <CalendarDays size={16} className="text-blue-500" /> Weekly Pattern
-        </h3>
-        {worstDay && (
-            <p className="text-xs text-amber-500 font-medium mb-3">
-                📉 {worstDay.day} is your weakest day ({worstDay.rate}%)
-            </p>
-        )}
-        <div className="flex items-end gap-1 h-24 mt-4"> {/* Increased height to h-24 */}
-            {pattern?.map((day, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                    <div
-                        className={`w-full rounded-t-lg transition-all ${
-                            day.rate >= 90 ? 'bg-emerald-400' :
-                            day.rate >= 60 ? 'bg-yellow-400' :
-                            day.rate > 0 ? 'bg-red-400' : 'bg-slate-200'
-                        }`}
-                        style={{ height: `${Math.max(day.rate, 12)}%` }} // Made min-height 12% so zero values show a gray stub
-                    />
-                    <span className={`text-[10px] font-bold ${day.day === worstDay?.day ? 'text-red-500' : 'text-slate-400'}`}>
-                        {day.day}
-                    </span>
-                </div>
-            ))}
+const WeeklyPatternCard = ({ pattern, worstDay }) => {
+    const { t } = useTranslation(); // 👈 ADD THIS LINE HERE!
+    
+    return (
+        <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+            <h3 className="text-sm font-bold text-slate-800 mb-1 flex items-center gap-2">
+                <CalendarDays size={16} className="text-blue-500" /> {t('health.weeklyPattern')}
+            </h3>
+            {/* ... keep the rest of the component exactly the same ... */}
+            {worstDay && (
+                <p className="text-xs text-amber-500 font-medium mb-3">
+                    📉 {worstDay.day} {t('health.weakestDay')} ({worstDay.rate}%)
+                </p>
+            )}
+            <div className="flex items-end gap-1 h-24 mt-4"> 
+                {pattern?.map((day, i) => (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                        <div
+                            className={`w-full rounded-t-lg transition-all ${
+                                day.rate >= 90 ? 'bg-emerald-400' :
+                                day.rate >= 60 ? 'bg-yellow-400' :
+                                day.rate > 0 ? 'bg-red-400' : 'bg-slate-200'
+                            }`}
+                            style={{ height: `${Math.max(day.rate, 12)}%` }} 
+                        />
+                        <span className={`text-[10px] font-bold ${day.day === worstDay?.day ? 'text-red-500' : 'text-slate-400'}`}>
+                            {day.day}
+                        </span>
+                    </div>
+                ))}
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 // --- MAIN PAGE ---
 const HealthTracking = () => {
+  const { t } = useTranslation();
   const [range, setRange] = useState(7); 
   const { data: trackingData, loading } = useHealthData(range);
   const { medicines } = useMedicines();
@@ -247,21 +256,21 @@ const HealthTracking = () => {
                 <div className="p-3 bg-blue-50 rounded-2xl">
                     <Activity className="text-2xl text-blue-600" />
                 </div>
-                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Health Insights</h1>
+                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t('health.title')}</h1>
             </div>
             
             <div className="flex bg-white/50 backdrop-blur-sm p-1 rounded-xl">
                 <button 
                     onClick={() => setRange(7)}
                     className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${range === 7 ? 'bg-white shadow-sm text-green-700' : 'text-slate-500'}`}
-                >7 Days</button>
+                >{t('health.7days')}</button>
                 <button 
                     onClick={() => setRange(30)}
                     className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${range === 30 ? 'bg-white shadow-sm text-green-700' : 'text-slate-500'}`}
-                >30 Days</button>
+                >{t('health.30days')}</button>
             </div>
         </div>
-        <p className="text-slate-500 text-sm ml-14">Your {range}-day health overview.</p>
+        <p className="text-slate-500 text-sm ml-14">{t('health.subtitle', { range })}</p>
       </div>
 
       <div className="px-5 max-w-7xl mx-auto space-y-6">
@@ -277,7 +286,7 @@ const HealthTracking = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-slate-800">{adherenceRate}%</p>
-              <p className="text-xs text-slate-400 font-medium">Adherence Score</p>
+              <p className="text-xs text-slate-400 font-medium">{t('health.adherenceScore')}</p>
             </div>
           </div>
 
@@ -287,11 +296,11 @@ const HealthTracking = () => {
           >
             <div className="flex justify-between items-start">
               <div className="p-2 bg-blue-50 rounded-lg text-blue-600 group-hover:bg-blue-100 transition-colors"><Pill size={20} /></div>
-              <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded-md font-bold group-hover:bg-white">View All</span>
+              <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded-md font-bold group-hover:bg-white">{t('health.viewAll')}</span>
             </div>
             <div>
               <p className="text-2xl font-bold text-slate-800">{totalMedicines}</p>
-              <p className="text-xs text-slate-400 font-medium">Lifetime Medicines</p>
+              <p className="text-xs text-slate-400 font-medium">{t('health.lifetimeMedicines')}</p>
             </div>
           </div>
           
@@ -301,7 +310,7 @@ const HealthTracking = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-slate-800">{activeMedicines}</p>
-              <p className="text-xs text-slate-400 font-medium">Active Now</p>
+              <p className="text-xs text-slate-400 font-medium">{t('health.activeNow')}</p>
             </div>
           </div>
 
@@ -311,9 +320,9 @@ const HealthTracking = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-slate-800">
-                {currentStreak} <span className="text-sm text-slate-400 font-normal">Days</span>
+                {currentStreak} <span className="text-sm text-slate-400 font-normal">t('health.days')</span>
               </p>
-              <p className="text-xs text-slate-400 font-medium">Current Streak</p>
+              <p className="text-xs text-slate-400 font-medium">{t('health.currentStreak')}</p>
             </div>
           </div>
         </div>
@@ -340,7 +349,7 @@ const HealthTracking = () => {
         <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="p-4 border-b border-slate-50 flex justify-between items-center">
               <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <BarChart3 className="text-blue-500" size={16} /> Activity Trend
+                <BarChart3 className="text-blue-500" size={16} /> {t('health.activityTrend')}
               </h2>
             </div>
             <div className="h-44 w-full p-2 animate-in fade-in">
@@ -364,14 +373,14 @@ const HealthTracking = () => {
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="h-full flex items-center justify-center text-slate-400 text-xs">No Data</div>
+                <div className="h-full flex items-center justify-center text-slate-400 text-xs">{t('health.noData')}</div>
               )}
             </div>
         </div>
 
         {/* 6. MEDICINE PERFORMANCE */}
         <div>
-           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-1">Medicine Performance</h3>
+           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-1">{t('health.medicinePerformance')}</h3>
            <div className="grid grid-cols-2 gap-3">
               {medicineBreakdown.length > 0 ? (
                 [...medicineBreakdown].reverse().map((medicine, index) => (
@@ -380,13 +389,13 @@ const HealthTracking = () => {
                         percentage={medicine.adherence}
                         color={getStrokeColor(medicine.adherence)}
                         label={medicine.name}
-                        subLabel={`${medicine.doses} doses/day`}
+                        subLabel={`${medicine.doses} ${t('health.dosesPerDay')}`}
                       />
                   </div>
                 ))
               ) : (
                 <div className="col-span-2 bg-white p-6 rounded-2xl border border-dashed border-slate-200 text-center">
-                  <p className="text-slate-400 text-sm">No medicines found</p>
+                  <p className="text-slate-400 text-sm">{t('health.noMedicinesFound')}</p>
                 </div>
               )}
            </div>

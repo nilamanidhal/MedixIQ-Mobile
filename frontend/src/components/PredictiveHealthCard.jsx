@@ -4,6 +4,7 @@ import {
     AlertTriangle, Sparkles, Activity, Lock, Send, 
     CheckCircle2, WifiOff 
 } from "lucide-react";
+import { useTranslation } from 'react-i18next';
 
 const GEN_AI_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
@@ -11,6 +12,7 @@ const GEN_AI_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const ai = GEN_AI_KEY ? new GoogleGenAI({ apiKey: GEN_AI_KEY }) : null;
 
 const PredictiveHealthCard = ({ medicines, stats }) => {
+    const { t, i18n } = useTranslation();
     const [analysis, setAnalysis] = useState(null);
     const [loading, setLoading] = useState(false);
     const [step, setStep] = useState(0);
@@ -21,9 +23,7 @@ const PredictiveHealthCard = ({ medicines, stats }) => {
         // 1. OFFLINE CHECK
         if (!navigator.onLine) {
             setAnalysis({ 
-                summary: language === 'hinglish' 
-                    ? "Aap offline hain. AI analysis ke liye internet connect karein." 
-                    : "You are offline. Please connect to the internet to use AI analysis.",
+               summary: language === 'hi' ? "आप ऑफलाइन हैं। AI के लिए इंटरनेट कनेक्ट करें।" : language === 'or' ? "ଆପଣ ଅଫଲାଇନ୍ ଅଛନ୍ତି। ଦୟାକରି ଇଣ୍ଟରନେଟ୍ ସଂଯୋଗ କରନ୍ତୁ।" : "You are offline. Please connect to the internet to use AI analysis.",
                 details: [{"label": "Action", "text": "Check your WiFi or Mobile Data."}],
                 type: "offline"
             });
@@ -51,6 +51,11 @@ const PredictiveHealthCard = ({ medicines, stats }) => {
                     dose: m.dose
                 }));
 
+                // Tell the AI exactly which language to respond in based on the app's current setting
+            let targetLanguageStr = "Simple English";
+            if (language === 'hi') targetLanguageStr = "Hindi language";
+            if (language === 'or') targetLanguageStr = "Odia language";
+
             const missedData = problemMeds.map(pm => {
                 const fullMed = medicines.find(m => m.name === pm.name);
                 return {
@@ -72,7 +77,7 @@ PATIENT DATA:
 - Worst time of day for doses: ${stats.worstSlot || 'Unknown'}
 - Worst day of week: ${stats.worstDay?.day || 'Unknown'}
 - Patient reported symptom: "${userSymptom || 'None'}"
-- Language: ${language === 'hinglish' ? 'Hinglish (Hindi words in English script)' : 'Simple English'}
+- Response Language MUST be: ${targetLanguageStr}
 
 ANALYSIS RULES:
 1. If adherence < 70%: This is medically serious — warn about condition-specific risks.
@@ -106,9 +111,7 @@ Return ONLY valid JSON (no markdown, no backticks):
         } catch (error) {
             console.error("AI Error", error);
             setAnalysis({ 
-                summary: language === 'hinglish'
-                    ? "Server busy hai. Kripya baad mein try karein."
-                    : "Service busy. Please try again later.",
+                summary: language === 'hi' ? "सर्वर व्यस्त है। कृपया बाद में प्रयास करें।" : "Service busy. Please try again later.",
                 details: [],
                 type: "info"
             });
@@ -138,12 +141,12 @@ Return ONLY valid JSON (no markdown, no backticks):
             <div className="bg-gradient-to-r from-violet-600 to-indigo-600 p-5 rounded-3xl shadow-lg text-white relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-10"><Sparkles size={80} /></div>
                 <div className="relative z-10">
-                    <h3 className="font-bold text-lg">AI Health Predictor</h3>
+                    <h3 className="font-bold text-lg">{t('ai.title')}</h3>
                     <p className="text-indigo-100 text-sm mb-4">
-                        Advanced analysis of your medicine habits & symptoms.
+                        {t('ai.subtitle')}
                     </p>
                     <button onClick={() => setStep(1)} className="bg-white text-indigo-600 px-4 py-2.5 rounded-xl font-bold flex gap-2 active:scale-95 transition-transform">
-                        <Lock size={16} /> Check Health Status
+                        <Lock size={16} /> {t('ai.checkStatus')}
                     </button>
                 </div>
             </div>
@@ -156,7 +159,7 @@ Return ONLY valid JSON (no markdown, no backticks):
                 <textarea
                     className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm mb-4 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                     rows="2"
-                    placeholder={language === 'hinglish' ? "Jaise: Chakkar aa raha hai..." : "e.g. I feel dizzy..."}
+                    placeholder={t('ai.symptomPlaceholder')}
                     value={userSymptom}
                     onChange={(e) => setUserSymptom(e.target.value)}
                 />
@@ -167,7 +170,7 @@ Return ONLY valid JSON (no markdown, no backticks):
                     className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold flex justify-center items-center gap-2 active:scale-95 transition-transform disabled:opacity-70 disabled:active:scale-100"
                 >
                     {loading ? <Activity className="animate-spin" size={16} /> : <Send size={16} />}
-                    {loading ? "Analyzing Patterns..." : "Analyze"}
+                    {loading ? t('ai.analyzing') : t('ai.analyze')}
                 </button>
             </div>
         );
@@ -180,9 +183,9 @@ Return ONLY valid JSON (no markdown, no backticks):
             <div className="flex justify-between mb-3">
                 <div className="flex items-center gap-2">
                     {style.icon}
-                    <h3 className={`font-bold ${style.text}`}>Analysis</h3>
+                    <h3 className={`font-bold ${style.text}`}>{t('ai.analysisLabel')}</h3>
                 </div>
-                <button onClick={() => setStep(0)} className="text-xs font-bold opacity-60">Close</button>
+                <button onClick={() => setStep(0)} className="text-xs font-bold opacity-60">{t('common.close')}</button>
             </div>
 
             <p className={`text-sm mb-4 ${style.text}`}>{analysis?.summary}</p>

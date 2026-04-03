@@ -3,6 +3,7 @@ import { useMedicines } from '../../hooks/useMedicines';
 import LoadingSpinner from '../LoadingSpinner'; 
 import { scheduleMedicineReminder, cancelAllAlarms } from '../../utils/LocalNotificationManager';
 import ConfirmationModal from '../ConfirmationModal'; // 👈 IMPORT YOUR MODAL
+import { useTranslation } from 'react-i18next';
 
 // 🎨 PRO ICONS
 import { 
@@ -12,6 +13,7 @@ import {
 } from "react-icons/lu";
 
 const MedicineList = ({ onEdit }) => {
+    const { t } = useTranslation();
     const { medicines, loading, deleteMedicine, toggleMuteMedicine, togglePauseMedicine, syncAlarms } = useMedicines();
     const [isSyncing, setIsSyncing] = useState(false);
 
@@ -172,7 +174,7 @@ if (loading && medicines.length === 0) {
                 <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6">
                     <LuPill className="text-4xl text-slate-300" />
                 </div>
-                <h3 className="text-xl font-bold text-slate-800 mb-2">No Medicines Yet</h3>
+                <h3 className="text-xl font-bold text-slate-800 mb-2">{t('medicines.noMedicines')}</h3>
                 <p className="text-slate-500 text-center max-w-xs leading-relaxed">
                     Tap the <span className="font-bold text-blue-600">+</span> button to add your first prescription.
                 </p>

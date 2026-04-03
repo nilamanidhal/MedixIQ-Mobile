@@ -1,0 +1,90 @@
+{
+  "nav": {
+    "home": "Home", "meds": "Meds", "alerts": "Alerts", "health": "Health", "more": "More"
+  },
+  "dashboard": {
+    "greeting": "Hi, {{name}}!", "friend": "Friend", "subtitle": "Let's stay healthy today.",
+    "online": "Online", "offline": "Offline Mode", "syncPending": "Sync Pending...", "synced": "Synced: {{time}}",
+    "enableNotifications": "Enable Notifications", "fixNow": "Fix Now",
+    "dailyGoal": "Daily Goal", "dosesTaken": "doses taken",
+    "upNext": "UP NEXT", "allCaughtUp": "All Caught Up!", "noPending": "No pending meds.",
+    "todaySchedule": "Today's Schedule", "noMedicines": "No medicines today!"
+  },
+  "medicines": {
+    "title": "My Medicines", "subtitle": "Manage dosages & schedules", "active": "Active", "loading": "Loading Medicines...",
+    "noMedicines": "No Medicines Yet", "noMedicinesDesc": "Tap the + button to add your first prescription.",
+    "status": { "active": "Active", "paused": "Paused", "expired": "Expired", "future": "Future" },
+    "form": {
+      "editMedicine": "Edit Medicine", "newMedicine": "New Medicine", "addDetails": "Add details & reminders",
+      "medicineName": "Medicine Name", "treatsCondition": "Treats Condition", "optional": "(Optional)",
+      "dosage": "Dosage", "reminderTimes": "Reminder Times", "addTime": "Add Time",
+      "startDate": "Start Date", "endDate": "End Date", "notes": "Notes", "saveMedicine": "Save Medicine", "saving": "Saving..."
+    },
+    "list": {
+      "yourList": "Your List ({{count}})", "syncAlarms": "Sync Alarms", "syncing": "Syncing...", "clear": "Clear"
+    }
+  },
+  "health": {
+    "title": "Health Insights", "subtitle": "Your {{range}}-day health overview.",
+    "adherenceScore": "Adherence Score", "lifetimeMedicines": "Lifetime Medicines", "activeNow": "Active Now",
+    "currentStreak": "Current Streak", "days": "Days", "medicinePerformance": "Medicine Performance", "noMedicinesFound": "No medicines found",
+    "historyTitle": "Medicine History", "historyDesc": "All medicines ever added", "activeLabel": "ACTIVE", "stoppedLabel": "STOPPED",
+    "added": "Added:", "stopped": "Stopped:", "bestTime": "Best Time to Take Meds", "missMostDoses": "You miss most doses in the",
+    "morning": "Morning", "afternoon": "Afternoon", "evening": "Evening", "night": "Night",
+    "weeklyPattern": "Weekly Pattern", "weakestDay": "is your weakest day", "activityTrend": "Activity Trend", "noData": "No Data",
+    "7days": "7 Days",
+    "30days": "30 Days",
+    "viewAll": "View All",
+    "dosesPerDay": "doses/day"
+  },
+  "history": {
+    "title": "History Log", "report": "Report", "today": "Today", "yesterday": "Yesterday", "dueNow": "Due Now",
+    "syncing": "Syncing...", "markTaken": "Mark Taken", "markMissed": "Mark Missed", "noHistory": "No history yet.",
+    "noHistoryDesc": "Your medication logs will appear here organized by date.", "loadOlder": "Load Older History", "loading": "Loading...",
+    "exportReport": "Export Report", "selectRange": "Select time range:", "last7Days": "Last 7 Days", "last30Days": "Last 30 Days",
+    "shareReport": "Share Report", "saveToDevice": "Save to Device"
+  },
+  "records": {
+    "title": "Medical Vault", "files": "Files", "search": "Search records...", "noRecords": "No records found",
+    "delete": "Delete", "share": "Share", "save": "Save", "addRecord": "Add Record", "addPage": "Add Page",
+    "recordTitle": "Title", "category": "Category", "saveRecord": "Save Record", "uploading": "Uploading...",
+    "prescription": "Prescription", "labReport": "Lab Report", "invoice": "Invoice", "otherCat": "Other",
+    "filesCount": "{{count}} Files",
+    "titlePlaceholder": "e.g. Blood Test Report",
+    "saveRecordCount": "Save Record ({{count}} Pages)",
+    "pageIndicator": "Page {{current}} of {{total}}"
+  },
+  "profile": {
+    "title": "Profile Settings", "email": "Email Address", "emailDesc": "Email cannot be changed directly.",
+    "fullName": "Full Name", "age": "Age", "gender": "Gender", "male": "Male", "female": "Female", "other": "Other",
+    "saveChanges": "Save Changes", "changePassword": "Change Password", "success": "Profile updated successfully!"
+  },
+  "reminders": {
+    "title": "Reminders", "upNext": "Up Next", "soon": "SOON", "in": "IN", "allClear": "All Clear!", "allClearDesc": "You have no pending reminders for the rest of the day.",
+    "systemHealth": "System Health", "notifications": "Notifications", "activeReady": "Active & Ready", "autoSync": "Auto Sync", "backgroundOn": "Background On"
+  },
+  "auth": {
+    "welcomeBack": "Welcome Back", "loginSubtitle": "Sign in to continue your health journey", "email": "Email Address", "password": "Password", "forgotPassword": "Forgot password?", "loginBtn": "Sign In", "dontHaveAccount": "Don't have an account?", "register": "Sign up",
+    "createAccount": "Create Account", "registerSubtitle": "Start your journey with MedMind", "name": "Full Name", "age": "Age", "gender": "Gender", "passwordMin": "Password (min 6 chars)", "confirmPassword": "Confirm Password", "alreadyHaveAccount": "Already have an account?", "login": "Log in"
+  },
+  "more": {
+    "safety": "Safety & Emergency", "medicalRecords": "Medical Records", "account": "Account & Support", "logout": "Log Out"
+  },
+  "language": {
+    "select": "Select Language", "cancel": "Cancel"
+  },
+  "ai": {
+    "title": "AI Health Predictor",
+    "subtitle": "Advanced analysis of your medicine habits & symptoms.",
+    "checkStatus": "Check Health Status",
+    "symptomPlaceholder": "e.g. I feel dizzy...",
+    "analyzing": "Analyzing Patterns...",
+    "analyze": "Analyze",
+    "analysisLabel": "Analysis"
+  },
+  "common": {
+    "syncing": "Syncing...",
+    "close": "Close",
+    "unknown": "Unknown"
+  }
+}

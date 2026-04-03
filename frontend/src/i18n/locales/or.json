@@ -1,0 +1,90 @@
+{
+  "nav": {
+    "home": "ହୋମ୍", "meds": "ଔଷଧ", "alerts": "ଆଲର୍ଟ", "health": "ସ୍ୱାସ୍ଥ୍ୟ", "more": "ଅଧିକ"
+  },
+  "dashboard": {
+    "greeting": "ନମସ୍କାର, {{name}}!", "friend": "ବନ୍ଧୁ", "subtitle": "ଆଜି ସୁସ୍ଥ ରୁହନ୍ତୁ।",
+    "online": "ଅନଲାଇନ୍", "offline": "ଅଫଲାଇନ୍ ମୋଡ୍", "syncPending": "ସିଙ୍କ ବାକି ଅଛି...", "synced": "ସିଙ୍କ: {{time}}",
+    "enableNotifications": "ନୋଟିଫିକେସନ୍ ଚାଲୁ କରନ୍ତୁ", "fixNow": "ଏବେ ଠିକ୍ କରନ୍ତୁ",
+    "dailyGoal": "ଦୈନିକ ଲକ୍ଷ୍ୟ", "dosesTaken": "ଡୋଜ୍ ନିଆଯାଇଛି",
+    "upNext": "ପରବର୍ତ୍ତୀ", "allCaughtUp": "ସବୁ ଠିକ୍!", "noPending": "କୌଣସି ଔଷଧ ବାକି ନାହିଁ।",
+    "todaySchedule": "ଆଜିର ସୂଚୀ", "noMedicines": "ଆଜି କୌଣସି ଔଷଧ ନାହିଁ!"
+  },
+  "medicines": {
+    "title": "ମୋ ଔଷଧ", "subtitle": "ଡୋଜ ଓ ସମୟ ପରିଚାଳନା", "active": "ସକ୍ରିୟ", "loading": "ଔଷଧ ଲୋଡ୍ ହେଉଛି...",
+    "noMedicines": "କୌଣସି ଔଷଧ ନାହିଁ", "noMedicinesDesc": "+ ବଟନ ଦବାଇ ପ୍ରଥମ ଔଷଧ ଯୋଡ଼ନ୍ତୁ।",
+    "status": { "active": "ସକ୍ରିୟ", "paused": "ବିରାମ", "expired": "ଶେଷ", "future": "ଆଗାମୀ" },
+    "form": {
+      "editMedicine": "ଔଷଧ ସଂପାଦନ କରନ୍ତୁ", "newMedicine": "ନୂଆ ଔଷଧ", "addDetails": "ବିବରଣୀ ଓ ଆଲାର୍ମ ଯୋଡ଼ନ୍ତୁ",
+      "medicineName": "ଔଷଧର ନାମ", "treatsCondition": "ରୋଗ", "optional": "(ଇଚ୍ଛାଧୀନ)",
+      "dosage": "ଡୋଜ", "reminderTimes": "ସ୍ମାରଣ ସମୟ", "addTime": "ସମୟ ଯୋଡ଼ନ୍ତୁ",
+      "startDate": "ଆରମ୍ଭ ତାରିଖ", "endDate": "ଶେଷ ତାରିଖ", "notes": "ନୋଟ", "saveMedicine": "ସଞ୍ଚୟ କରନ୍ତୁ", "saving": "ସଞ୍ଚୟ ହେଉଛି..."
+    },
+    "list": {
+      "yourList": "ଆପଣଙ୍କ ତାଲିକା ({{count}})", "syncAlarms": "ଆଲାର୍ମ ସିଙ୍କ", "syncing": "ସିଙ୍କ ହେଉଛି...", "clear": "ଡିଲିଟ୍"
+    }
+  },
+  "health": {
+    "title": "ସ୍ୱାସ୍ଥ୍ୟ ଇନସାଇଟସ୍", "subtitle": "ଆପଣଙ୍କ {{range}}-ଦିନର ସ୍ୱାସ୍ଥ୍ୟ ବିବରଣୀ।",
+    "adherenceScore": "ନିୟମିତ ସ୍କୋର", "lifetimeMedicines": "ମୋଟ ଔଷଧ", "activeNow": "ବର୍ତ୍ତମାନ ସକ୍ରିୟ",
+    "currentStreak": "ବର୍ତ୍ତମାନ ଷ୍ଟ୍ରିକ୍", "days": "ଦିନ", "medicinePerformance": "ଔଷଧ ପ୍ରଦର୍ଶନ", "noMedicinesFound": "କୌଣସି ଔଷଧ ମିଳିଲା ନାହିଁ",
+    "historyTitle": "ଔଷଧ ଇତିହାସ", "historyDesc": "ଯୋଡ଼ା ଯାଇଥିବା ସମସ୍ତ ଔଷଧ", "activeLabel": "ସକ୍ରିୟ", "stoppedLabel": "ବନ୍ଦ",
+    "added": "ଯୋଡ଼ାଯାଇଛି:", "stopped": "ବନ୍ଦ ହୋଇଛି:", "bestTime": "ଔଷଧ ନେବାର ଉତ୍ତମ ସମୟ", "missMostDoses": "ଆପଣ ଅଧିକାଂଶ ଔଷଧ ଭୁଲିଯାଆନ୍ତି",
+    "morning": "ସକାଳ", "afternoon": "ଦ୍ୱିପ୍ରହର", "evening": "ସନ୍ଧ୍ୟା", "night": "ରାତି",
+    "weeklyPattern": "ସାପ୍ତାହିକ ପ୍ୟାଟର୍ଣ୍ଣ", "weakestDay": "ଆପଣଙ୍କର ସବୁଠାରୁ ଦୁର୍ବଳ ଦିନ", "activityTrend": "କାର୍ଯ୍ୟକଳାପ ଟ୍ରେଣ୍ଡ", "noData": "କୌଣସି ତଥ୍ୟ ନାହିଁ",
+    "7days": "7 ଦିନ",
+    "30days": "30 ଦିନ",
+    "viewAll": "ସବୁ ଦେଖନ୍ତୁ",
+    "dosesPerDay": "ଡୋଜ୍/ଦିନ"
+  },
+  "history": {
+    "title": "ଇତିହାସ ଲଗ୍", "report": "ରିପୋର୍ଟ", "today": "ଆଜି", "yesterday": "ଗତକାଲି", "dueNow": "ଏବେ ନିଅନ୍ତୁ",
+    "syncing": "ସିଙ୍କ ହେଉଛି...", "markTaken": "ନିଆଯାଇଛି", "markMissed": "ଛୁଟିଗଲା", "noHistory": "କୌଣସି ଇତିହାସ ନାହିଁ।",
+    "noHistoryDesc": "ଆପଣଙ୍କର ଔଷଧ ଲଗ୍ ତାରିଖ ଅନୁଯାୟୀ ଏଠାରେ ଦେଖାଯିବ।", "loadOlder": "ପୁରୁଣା ଇତିହାସ ଦେଖନ୍ତୁ", "loading": "ଲୋଡ ହେଉଛି...",
+    "exportReport": "ରିପୋର୍ଟ ରପ୍ତାନି କରନ୍ତୁ", "selectRange": "ସମୟ ସୀମା ବାଛନ୍ତୁ:", "last7Days": "ଗତ 7 ଦିନ", "last30Days": "ଗତ 30 ଦିନ",
+    "shareReport": "ସେୟାର କରନ୍ତୁ", "saveToDevice": "ସେଭ୍ କରନ୍ତୁ"
+  },
+  "records": {
+    "title": "ମେଡିକାଲ୍ ଭଲ୍ଟ", "files": "ଫାଇଲ୍", "search": "ରେକର୍ଡ ଖୋଜନ୍ତୁ...", "noRecords": "କୌଣସି ରେକର୍ଡ ମିଳିଲା ନାହିଁ",
+    "delete": "ଡିଲିଟ୍", "share": "ସେୟାର", "save": "ସେଭ୍", "addRecord": "ରେକର୍ଡ ଯୋଡ଼ନ୍ତୁ", "addPage": "ପୃଷ୍ଠା ଯୋଡ଼ନ୍ତୁ",
+    "recordTitle": "ଶୀର୍ଷକ", "category": "ବିଭାଗ", "saveRecord": "ସେଭ୍ କରନ୍ତୁ", "uploading": "ଅପଲୋଡ୍ ହେଉଛି...",
+    "prescription": "ପ୍ରେସକ୍ରିପସନ୍", "labReport": "ଲ୍ୟାବ୍ ରିପୋର୍ଟ", "invoice": "ବିଲ୍", "otherCat": "ଅନ୍ୟାନ୍ୟ",
+    "filesCount": "{{count}} ଫାଇଲ୍",
+    "titlePlaceholder": "ଉଦାହରଣ: ରକ୍ତ ପରୀକ୍ଷା ରିପୋର୍ଟ",
+    "saveRecordCount": "ସେଭ୍ କରନ୍ତୁ ({{count}} ପୃଷ୍ଠା)",
+    "pageIndicator": "ପୃଷ୍ଠା {{current}} / {{total}}"
+  },
+  "profile": {
+    "title": "ପ୍ରୋଫାଇଲ୍ ସେଟିଂସ", "email": "ଇମେଲ୍", "emailDesc": "ଇମେଲ୍ ସିଧାସଳଖ ପରିବର୍ତ୍ତନ କରାଯାଇପାରିବ ନାହିଁ।",
+    "fullName": "ପୂରା ନାମ", "age": "ବୟସ", "gender": "ଲିଙ୍ଗ", "male": "ପୁରୁଷ", "female": "ମହିଳା", "other": "ଅନ୍ୟାନ୍ୟ",
+    "saveChanges": "ପରିବର୍ତ୍ତନ ସେଭ୍ କରନ୍ତୁ", "changePassword": "ପାସୱାର୍ଡ ବଦଳାନ୍ତୁ", "success": "ପ୍ରୋଫାଇଲ୍ ସଫଳତାର ସହ ଅପଡେଟ୍ ହେଲା!"
+  },
+  "reminders": {
+    "title": "ସ୍ମାରଣ", "upNext": "ପରବର୍ତ୍ତୀ", "soon": "ଶୀଘ୍ର", "in": "ରେ", "allClear": "ସବୁ ଠିକ୍!", "allClearDesc": "ଆଜି ପାଇଁ କୌଣସି ଔଷଧ ବାକି ନାହିଁ।",
+    "systemHealth": "ସିଷ୍ଟମ୍ ସ୍ଥିତି", "notifications": "ନୋଟିଫିକେସନ୍", "activeReady": "ସକ୍ରିୟ ଓ ପ୍ରସ୍ତୁତ", "autoSync": "ଅଟୋ ସିଙ୍କ", "backgroundOn": "ବ୍ୟାକଗ୍ରାଉଣ୍ଡ ଅନ୍"
+  },
+  "auth": {
+    "welcomeBack": "ସ୍ୱାଗତମ", "loginSubtitle": "ଆପଣଙ୍କର ସ୍ୱାସ୍ଥ୍ୟ ଯାତ୍ରା ଜାରି ରଖିବାକୁ ଲଗଇନ୍ କରନ୍ତୁ", "email": "ଇମେଲ୍", "password": "ପାସୱାର୍ଡ", "forgotPassword": "ପାସୱାର୍ଡ ଭୁଲିଯାଇଛନ୍ତି?", "loginBtn": "ଲଗଇନ୍", "dontHaveAccount": "ଆକାଉଣ୍ଟ ନାହିଁ?", "register": "ସାଇନ୍ ଅପ୍ କରନ୍ତୁ",
+    "createAccount": "ଆକାଉଣ୍ଟ ତିଆରି କରନ୍ତୁ", "registerSubtitle": "MedMind ସହିତ ଆପଣଙ୍କର ଯାତ୍ରା ଆରମ୍ଭ କରନ୍ତୁ", "name": "ପୂରା ନାମ", "age": "ବୟସ", "gender": "ଲିଙ୍ଗ", "passwordMin": "ପାସୱାର୍ଡ (ସର୍ବନିମ୍ନ 6 ଅକ୍ଷର)", "confirmPassword": "ପାସୱାର୍ଡ ନିଶ୍ଚିତ କରନ୍ତୁ", "alreadyHaveAccount": "ଆକାଉଣ୍ଟ ଅଛି କି?", "login": "ଲଗଇନ୍"
+  },
+  "more": {
+    "safety": "ସୁରକ୍ଷା ଓ ଜରୁରୀକାଳୀନ", "medicalRecords": "ମେଡିକାଲ୍ ରେକର୍ଡ", "account": "ଆକାଉଣ୍ଟ ଓ ସପୋର୍ଟ", "logout": "ଲଗଆଉଟ୍"
+  },
+  "language": {
+    "select": "ଭାଷା ବାଛନ୍ତୁ", "cancel": "ବାତିଲ୍ କରନ୍ତୁ"
+  },
+  "ai": {
+    "title": "AI ସ୍ୱାସ୍ଥ୍ୟ ପୂର୍ବାନୁମାନ",
+    "subtitle": "ଆପଣଙ୍କ ଔଷଧ ଅଭ୍ୟାସ ଓ ଲକ୍ଷଣର ଉନ୍ନତ ବିଶ୍ଳେଷଣ।",
+    "checkStatus": "ସ୍ୱାସ୍ଥ୍ୟ ସ୍ଥିତି ଯାଞ୍ଚ କରନ୍ତୁ",
+    "symptomPlaceholder": "ଉଦାହରଣ: ମୋତେ ମୁଣ୍ଡ ବୁଲାଉଛି...",
+    "analyzing": "ପ୍ୟାଟର୍ଣ୍ଣ ବିଶ୍ଳେଷଣ ହେଉଛି...",
+    "analyze": "ବିଶ୍ଳେଷଣ କରନ୍ତୁ",
+    "analysisLabel": "ବିଶ୍ଳେଷଣ"
+  },
+  "common": {
+    "syncing": "ସିଙ୍କ ହେଉଛି...",
+    "close": "ବନ୍ଦ କରନ୍ତୁ",
+    "unknown": "ଅଜ୍ଞାତ"
+  }
+}

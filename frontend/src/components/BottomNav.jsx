@@ -7,37 +7,19 @@ import {
   Activity, 
   Menu 
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
 
   const navItems = [
-    { 
-      path: '/dashboard', 
-      icon: Home, 
-      label: 'Home' 
-    },
-    { 
-      path: '/active-medicines', 
-      icon: Pill, 
-      label: 'Meds' 
-    },
-    { 
-      path: '/reminders', 
-      icon: Bell, 
-      label: 'Alerts' 
-    },
-    { 
-      path: '/health-tracking', 
-      icon: Activity, 
-      label: 'Health' 
-    },
-    { 
-      path: '/more', 
-      icon: Menu, 
-      label: 'More' 
-    },
+    { path: '/dashboard', icon: Home, label: t('nav.home') },
+    { path: '/active-medicines', icon: Pill, label: t('nav.meds') },
+    { path: '/reminders', icon: Bell, label: t('nav.alerts') },
+    { path: '/health-tracking', icon: Activity, label: t('nav.health') },
+    { path: '/more', icon: Menu, label: t('nav.more') },
   ];
 
   return (
