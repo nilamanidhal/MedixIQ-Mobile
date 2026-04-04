@@ -86,5 +86,41 @@
     "syncing": "सिंक हो रहा...",
     "close": "बंद करें",
     "unknown": "अज्ञात"
+  },
+  "review": {
+    "title": "दैनिक समीक्षा",
+    "pending": "आपकी {{count}} दवाएं बाकी हैं।",
+    "taken": "ली गई",
+    "missed": "चूक गई",
+    "remindLater": "बाद में याद दिलाएं",
+    "scheduled": "निर्धारित समय"
+  },
+  "more": {
+    "safety": "सुरक्षा और आपातकाल",
+    "emergencyProfile": "आपातकालीन प्रोफ़ाइल और क्यूआर",
+    "emergencyDesc": "मेडिकल आईडी और वॉलेट कार्ड",
+    "sentinelMode": "सेंटिनल मोड",
+    "sentinelDesc": "दुर्घटना का पता लगाएं और एसएमएस भेजें",
+    "testAccident": "दुर्घटना परीक्षण",
+    "testDesc": "यूआई का परीक्षण करने के लिए दुर्घटना का अनुकरण करें",
+    "medicalRecords": "चिकित्सा रिकॉर्ड",
+    "prescriptions": "प्रिस्क्रिप्शन",
+    "prescriptionsDesc": "पर्चे अपलोड और प्रबंधित करें",
+    "historyLogs": "इतिहास लॉग",
+    "historyDesc": "पिछली दवाओं का लॉग देखें",
+    "accountSupport": "खाता और सहायता",
+    "profileSettings": "प्रोफ़ाइल सेटिंग्स",
+    "profileDesc": "व्यक्तिगत विवरण अपडेट करें",
+    "contactSupport": "संपर्क सहायता",
+    "contactDesc": "ऐप के साथ सहायता प्राप्त करें",
+    "language": "Language / भाषा / ଭାଷା",
+    "languageDesc": "English · हिंदी · ଓଡ଼ିଆ",
+    "legalPrivacy": "कानूनी और गोपनीयता",
+    "legalDesc": "शर्तें, गोपनीयता नीति और लाइसेंस",
+    "logout": "लॉग आउट",
+    "confirmLogout": "लॉग आउट की पुष्टि करें?",
+    "logoutMsg": "लॉग आउट करने से असहेजा गया स्थानीय डेटा साफ़ हो जाएगा।",
+    "yesLogout": "हां, लॉग आउट करें",
+    "version": "MedixIQ v1.0.0"
   }
 }

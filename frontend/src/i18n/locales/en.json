@@ -86,5 +86,41 @@
     "syncing": "Syncing...",
     "close": "Close",
     "unknown": "Unknown"
+  },
+  "review": {
+    "title": "Daily Review",
+    "pending": "You have {{count}} pending meds.",
+    "taken": "Taken",
+    "missed": "Missed",
+    "remindLater": "Remind me later",
+    "scheduled": "SCHEDULED"
+  },
+  "more": {
+    "safety": "Safety & Emergency",
+    "emergencyProfile": "Emergency Profile & QR",
+    "emergencyDesc": "Medical ID & Wallet Card",
+    "sentinelMode": "Sentinel Mode",
+    "sentinelDesc": "Auto-detect accidents & send SMS",
+    "testAccident": "Test Accident Overlay",
+    "testDesc": "Simulate a crash to test UI",
+    "medicalRecords": "Medical Records",
+    "prescriptions": "Prescriptions",
+    "prescriptionsDesc": "Upload and manage scripts",
+    "historyLogs": "History Logs",
+    "historyDesc": "View past medication logs",
+    "accountSupport": "Account & Support",
+    "profileSettings": "Profile Settings",
+    "profileDesc": "Update personal details",
+    "contactSupport": "Contact Support",
+    "contactDesc": "Get help with the app",
+    "language": "Language / भाषा / ଭାଷା",
+    "languageDesc": "English · हिंदी · ଓଡ଼ିଆ",
+    "legalPrivacy": "Legal & Privacy",
+    "legalDesc": "Terms, Privacy Policy & Licenses",
+    "logout": "Log Out",
+    "confirmLogout": "Confirm Logout?",
+    "logoutMsg": "Logging out will clear unsaved local data. Please ensure you are online to sync before leaving.",
+    "yesLogout": "Yes, Logout",
+    "version": "MedixIQ v1.0.0"
   }
 }

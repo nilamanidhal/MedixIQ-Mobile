@@ -360,7 +360,7 @@ if (loading && medicines.length === 0) {
                     <div className="z-10">
                         <h3 className="font-bold text-slate-700 text-lg">{t('dashboard.dailyGoal')}</h3>
                         <p className="text-slate-400 text-xs mt-1 font-medium">
-                            <span className="font-bold text-blue-600 text-xl">{todayStats.taken}</span> / {todayStats.total} 
+                            <span className="font-bold text-blue-600 text-xl">{todayStats.taken} / {todayStats.total} </span>
                            {t('dashboard.dosesTaken', { taken: todayStats.taken, total: todayStats.total })}
                         </p>
                     </div>

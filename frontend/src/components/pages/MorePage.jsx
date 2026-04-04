@@ -23,17 +23,17 @@ const MorePage = () => {
   // Grouped Menu Items for a cleaner UI
   const menuGroups = [
     {
-      title: "Safety & Emergency",
+      title: t('more.safety'),
       items: [
         { 
-          label: 'Emergency Profile & QR', 
+          label: t('more.emergencyProfile'), 
           icon: <Siren size={20} className="text-red-600" />, 
           bg: 'bg-red-50',
           desc: 'Medical ID & Wallet Card',
           path: '/emergency-setup'
         },
         { 
-          label: 'Sentinel Mode', 
+          label: t('more.sentinelMode'), 
           icon: <ShieldAlert size={20} className="text-orange-600" />, 
           bg: 'bg-orange-50',
           desc: 'Auto-detect accidents & send SMS',
@@ -42,7 +42,7 @@ const MorePage = () => {
           action: () => toggleSentinel(!isEnabled)
         },
         { 
-          label: 'Test Accident Overlay', 
+          label: t('more.testAccident'), 
           icon: <AlertTriangle size={20} className="text-amber-600" />, 
           bg: 'bg-amber-50',
           desc: 'Simulate a crash to test UI',
@@ -51,17 +51,17 @@ const MorePage = () => {
       ]
     },
     {
-      title: "Medical Records",
+      title: t('more.medicalRecords'),
       items: [
         { 
-          label: 'Prescriptions', 
+          label: t('more.prescriptions'), 
           icon: <FileText size={20} className="text-blue-600" />, 
           bg: 'bg-blue-50',
           desc: 'Upload and manage scripts',
           path: '/medical-records'
         },
         { 
-          label: 'History Logs', 
+          label: t('more.historyLogs'), 
           icon: <Activity size={20} className="text-emerald-600" />, 
           bg: 'bg-emerald-50',
           desc: 'View past medication logs',
@@ -70,31 +70,31 @@ const MorePage = () => {
       ]
     },
     {
-      title: "Account & Support",
+      title: t('more.accountSupport'),
       items: [
         { 
-          label: 'Profile Settings', 
+          label: t('more.profileSettings'), 
           icon: <User size={20} className="text-indigo-600" />, 
           bg: 'bg-indigo-50',
           desc: 'Update personal details',
           path: '/profile-settings'
         },
         { 
-          label: 'Contact Support', 
+          label: t('more.contactSupport'), 
           icon: <HelpCircle size={20} className="text-purple-600" />, 
           bg: 'bg-purple-50',
           desc: 'Get help with the app',
           path: '/contact'
         },
         {
-          label: 'Language / भाषा / ଭାଷା',
+          label: t('more.language'),
           icon: <Globe size={20} className="text-cyan-600" />,
           bg: 'bg-cyan-50',
           desc: 'English · हिंदी · ଓଡ଼ିଆ',
           action: () => setShowLanguage(true)
         },
         { 
-          label: 'Legal & Privacy', 
+          label: t('more.legalPrivacy'), 
           icon: <Shield size={20} className="text-slate-600" />, 
           bg: 'bg-slate-100',
           desc: 'Terms, Privacy Policy & Licenses',
@@ -115,7 +115,7 @@ const MorePage = () => {
           </div>
           <div>
             <h2 className="text-2xl font-bold text-slate-900 tracking-tight leading-tight">
-              {user?.name || 'User'}
+              {user?.name || t('common.unknown')}
             </h2>
             <p className="text-slate-600 text-sm font-medium">{user?.email}</p>
           </div>
@@ -183,22 +183,22 @@ const MorePage = () => {
             className="w-full bg-white text-red-500 font-bold py-4 rounded-2xl border border-red-100 shadow-sm hover:bg-red-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
             <LogOut size={18} />
-            <span>Log Out</span>
+            <span>{t('more.logout')}</span>
           </button>
         </div>
         
         <div className="text-center mt-2 text-[10px] font-bold text-slate-300 uppercase tracking-widest">
-          MedixIQ v1.0.0
+          {t('more.version')}
         </div>
       </div>
 
       {/* CONFIRMATION MODAL */}
       <ConfirmationModal
         isOpen={showLogoutConfirm}
-        title="Confirm Logout?"
-        message="Logging out will clear unsaved local data. Please ensure you are online to sync before leaving."
-        confirmText="Yes, Logout"
-        cancelText="Cancel"
+        title={t('more.confirmLogout')}
+        message={t('more.logoutMsg')}
+        confirmText={t('more.yesLogout')}
+        cancelText={t('common.cancel')}
         isDanger={true}
         onConfirm={() => {
             setShowLogoutConfirm(false);
@@ -216,7 +216,7 @@ const MorePage = () => {
                             onClick={() => setShowLanguage(false)}
                             className="w-full mt-3 py-4 bg-white rounded-2xl font-bold text-slate-600"
                         >
-                            Cancel
+                            {t('common.cancel')}
                         </button>
                     </div>
                 </div>

@@ -86,5 +86,41 @@
     "syncing": "ସିଙ୍କ ହେଉଛି...",
     "close": "ବନ୍ଦ କରନ୍ତୁ",
     "unknown": "ଅଜ୍ଞାତ"
+  },
+  "review": {
+    "title": "ଦୈନିକ ସମୀକ୍ଷା",
+    "pending": "ଆପଣଙ୍କର {{count}} ଟି ଔଷଧ ବାକି ଅଛି।",
+    "taken": "ନିଆଯାଇଛି",
+    "missed": "ଛୁଟିଗଲା",
+    "remindLater": "ପରେ ମନେ ପକାନ୍ତୁ",
+    "scheduled": "ନିର୍ଦ୍ଧାରିତ ସମୟ"
+  },
+  "more": {
+    "safety": "ସୁରକ୍ଷା ଏବଂ ଜରୁରୀକାଳୀନ",
+    "emergencyProfile": "ଜରୁରୀକାଳୀନ ପ୍ରୋଫାଇଲ୍ ଏବଂ QR",
+    "emergencyDesc": "ମେଡିକାଲ୍ ID ଏବଂ ୱାଲେଟ୍ କାର୍ଡ",
+    "sentinelMode": "ସେଣ୍ଟିନେଲ୍ ମୋଡ୍",
+    "sentinelDesc": "ଦୁର୍ଘଟଣା ଚିହ୍ନଟ କରନ୍ତୁ ଏବଂ SMS ପଠାନ୍ତୁ",
+    "testAccident": "ଦୁର୍ଘଟଣା ପରୀକ୍ଷା",
+    "testDesc": "UI ପରୀକ୍ଷା କରିବାକୁ ଏକ ଦୁର୍ଘଟଣା ସିମୁଲେଟ୍ କରନ୍ତୁ",
+    "medicalRecords": "ମେଡିକାଲ୍ ରେକର୍ଡ",
+    "prescriptions": "ପ୍ରେସକ୍ରିପସନ୍",
+    "prescriptionsDesc": "ଅପଲୋଡ୍ କରନ୍ତୁ ଏବଂ ପରିଚାଳନା କରନ୍ତୁ",
+    "historyLogs": "ଇତିହାସ ଲଗ୍",
+    "historyDesc": "ଅତୀତର ଔଷଧ ଲଗ୍ ଦେଖନ୍ତୁ",
+    "accountSupport": "ଆକାଉଣ୍ଟ ଏବଂ ସପୋର୍ଟ",
+    "profileSettings": "ପ୍ରୋଫାଇଲ୍ ସେଟିଂସ",
+    "profileDesc": "ବ୍ୟକ୍ତିଗତ ବିବରଣୀ ଅପଡେଟ୍ କରନ୍ତୁ",
+    "contactSupport": "ସପୋର୍ଟ ସହ ଯୋଗାଯୋଗ କରନ୍ତୁ",
+    "contactDesc": "ଆପ୍ ସହିତ ସାହାଯ୍ୟ ପାଆନ୍ତୁ",
+    "language": "Language / भाषा / ଭାଷା",
+    "languageDesc": "English · हिंदी · ଓଡ଼ିଆ",
+    "legalPrivacy": "ଆଇନଗତ ଏବଂ ଗୋପନୀୟତା",
+    "legalDesc": "ସର୍ତ୍ତାବଳୀ, ଗୋପନୀୟତା ନୀତି ଏବଂ ଲାଇସେନ୍ସ",
+    "logout": "ଲଗ୍ ଆଉଟ୍",
+    "confirmLogout": "ଲଗ୍ ଆଉଟ୍ ନିଶ୍ଚିତ କରନ୍ତୁ?",
+    "logoutMsg": "ଲଗ୍ ଆଉଟ୍ କଲେ ସ୍ଥାନୀୟ ଡାଟା ଡିଲିଟ୍ ହୋଇଯିବ।",
+    "yesLogout": "ହଁ, ଲଗ୍ ଆଉଟ୍",
+    "version": "MedixIQ v1.1.0"
   }
 }

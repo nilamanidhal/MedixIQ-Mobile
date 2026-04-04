@@ -320,7 +320,7 @@ const HealthTracking = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-slate-800">
-                {currentStreak} <span className="text-sm text-slate-400 font-normal">t('health.days')</span>
+                {currentStreak} <span className="text-sm text-slate-400 font-normal">{t('health.days')}</span>
               </p>
               <p className="text-xs text-slate-400 font-medium">{t('health.currentStreak')}</p>
             </div>
