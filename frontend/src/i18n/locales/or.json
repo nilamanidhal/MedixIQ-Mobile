@@ -18,7 +18,11 @@
       "editMedicine": "ଔଷଧ ସଂପାଦନ କରନ୍ତୁ", "newMedicine": "ନୂଆ ଔଷଧ", "addDetails": "ବିବରଣୀ ଓ ଆଲାର୍ମ ଯୋଡ଼ନ୍ତୁ",
       "medicineName": "ଔଷଧର ନାମ", "treatsCondition": "ରୋଗ", "optional": "(ଇଚ୍ଛାଧୀନ)",
       "dosage": "ଡୋଜ", "reminderTimes": "ସ୍ମାରଣ ସମୟ", "addTime": "ସମୟ ଯୋଡ଼ନ୍ତୁ",
-      "startDate": "ଆରମ୍ଭ ତାରିଖ", "endDate": "ଶେଷ ତାରିଖ", "notes": "ନୋଟ", "saveMedicine": "ସଞ୍ଚୟ କରନ୍ତୁ", "saving": "ସଞ୍ଚୟ ହେଉଛି..."
+      "startDate": "ଆରମ୍ଭ ତାରିଖ", "endDate": "ଶେଷ ତାରିଖ", "notes": "ନୋଟ", "saveMedicine": "ସଞ୍ଚୟ କରନ୍ତୁ", "saving": "ସଞ୍ଚୟ ହେଉଛି...",
+      "yourList": "ଆପଣଙ୍କ ତାଲିକା",
+    "syncAlarms": "ଆଲାର୍ମ ସିଙ୍କ",
+    "syncing": "ସିଙ୍କ ହେଉଛି...",
+    "clear": "ଡିଲିଟ୍"
     },
     "list": {
       "yourList": "ଆପଣଙ୍କ ତାଲିକା ({{count}})", "syncAlarms": "ଆଲାର୍ମ ସିଙ୍କ", "syncing": "ସିଙ୍କ ହେଉଛି...", "clear": "ଡିଲିଟ୍"

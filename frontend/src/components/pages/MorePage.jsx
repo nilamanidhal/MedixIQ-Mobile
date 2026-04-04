@@ -198,7 +198,7 @@ const MorePage = () => {
         title={t('more.confirmLogout')}
         message={t('more.logoutMsg')}
         confirmText={t('more.yesLogout')}
-        cancelText={t('common.cancel')}
+        cancelText={t('language.cancel')}
         isDanger={true}
         onConfirm={() => {
             setShowLogoutConfirm(false);
@@ -216,7 +216,7 @@ const MorePage = () => {
                             onClick={() => setShowLanguage(false)}
                             className="w-full mt-3 py-4 bg-white rounded-2xl font-bold text-slate-600"
                         >
-                            {t('common.cancel')}
+                            {t('language.cancel')}
                         </button>
                     </div>
                 </div>

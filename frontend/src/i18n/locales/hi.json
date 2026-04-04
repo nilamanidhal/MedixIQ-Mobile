@@ -18,7 +18,11 @@
       "editMedicine": "दवा संपादित करें", "newMedicine": "नई दवा", "addDetails": "विवरण और अनुस्मारक जोड़ें",
       "medicineName": "दवा का नाम", "treatsCondition": "बीमारी", "optional": "(वैकल्पिक)",
       "dosage": "खुराक", "reminderTimes": "अनुस्मारक समय", "addTime": "समय जोड़ें",
-      "startDate": "शुरू की तारीख", "endDate": "खत्म की तारीख", "notes": "नोट्स", "saveMedicine": "दवा सहेजें", "saving": "सहेजा जा रहा है..."
+      "startDate": "शुरू की तारीख", "endDate": "खत्म की तारीख", "notes": "नोट्स", "saveMedicine": "दवा सहेजें", "saving": "सहेजा जा रहा है...",
+      "yourList": "आपकी सूची",
+    "syncAlarms": "अलार्म सिंक",
+    "syncing": "सिंक हो रहा...",
+    "clear": "हटाएं"
     },
     "list": {
       "yourList": "आपकी सूची ({{count}})", "syncAlarms": "अलार्म सिंक", "syncing": "सिंक हो रहा...", "clear": "हटाएं"

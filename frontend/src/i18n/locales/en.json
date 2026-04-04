@@ -18,7 +18,11 @@
       "editMedicine": "Edit Medicine", "newMedicine": "New Medicine", "addDetails": "Add details & reminders",
       "medicineName": "Medicine Name", "treatsCondition": "Treats Condition", "optional": "(Optional)",
       "dosage": "Dosage", "reminderTimes": "Reminder Times", "addTime": "Add Time",
-      "startDate": "Start Date", "endDate": "End Date", "notes": "Notes", "saveMedicine": "Save Medicine", "saving": "Saving..."
+      "startDate": "Start Date", "endDate": "End Date", "notes": "Notes", "saveMedicine": "Save Medicine", "saving": "Saving...",
+      "yourList": "Your List",
+    "syncAlarms": "Sync Alarms",
+    "syncing": "Syncing...",
+    "clear": "Clear"
     },
     "list": {
       "yourList": "Your List ({{count}})", "syncAlarms": "Sync Alarms", "syncing": "Syncing...", "clear": "Clear"
