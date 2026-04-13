@@ -106,12 +106,56 @@ router.put('/logs/:logId', authMiddleware, async (req, res) => {
    MEDICINE ROUTES (SYNC)
    --------------------------------------------------------- */
 
-// GET ALL MEDICINES
+// GET ALL MEDICINES (WITH EXACT TIME AUTO-CLEANUP)
 router.get('/', authMiddleware, async (req, res) => {
   try {
+    const now = new Date();
+
+    // 1. SILENT AUTO-CLEANUP WITH EXACT TIME CHECK ⏱️
+    // Fetch only active medicines to check their exact expiration minute
+    const activeMedicines = await Medicine.find({ userId: req.user._id, isActive: true });
+    const expiredIds = [];
+
+    for (let med of activeMedicines) {
+        if (med.duration && med.duration.endDate) {
+            const exactEndDate = new Date(med.duration.endDate);
+            
+            // Find the very last dose time for the day (e.g., "22:00")
+            let latestTime = "23:59"; // Default to midnight if times array is missing
+            if (med.times && med.times.length > 0) {
+                // Sorting strings like "08:00" and "22:00" will put the latest time at the end
+                const sortedTimes = [...med.times].sort();
+                latestTime = sortedTimes[sortedTimes.length - 1]; 
+            }
+
+            // Extract hours and minutes (e.g., "22" and "00")
+            const [hours, minutes] = latestTime.split(':').map(Number);
+            
+            // Apply that exact time to the end date (adds 59 seconds buffer)
+            exactEndDate.setHours(hours, minutes, 59, 999);
+
+            // If right now is past the final dose minute, mark it for deactivation!
+            if (now > exactEndDate) {
+                expiredIds.push(med._id);
+            }
+        }
+    }
+
+    // If we found any that just passed their final time, update them in the DB
+    if (expiredIds.length > 0) {
+        await Medicine.updateMany(
+            { _id: { $in: expiredIds } },
+            { $set: { isActive: false } }
+        );
+    }
+
+    // 2. FETCH THE FRESH DATA 📦
+    // Fetch again, filtering for isActive: true so the expired ones are hidden
     const medicines = await Medicine.find({ userId: req.user._id, isActive: true }).sort({ createdAt: -1 });
+    
     res.json({ medicines });
   } catch (err) {
+    console.error("Error fetching medicines:", err.message);
     res.status(500).json({ message: 'Error fetching medicines' });
   }
 });
