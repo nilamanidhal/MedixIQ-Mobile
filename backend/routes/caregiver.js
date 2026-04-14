@@ -114,6 +114,32 @@ router.get('/patients', authMiddleware, async (req, res) => {
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// GET MY CAREGIVERS (Patient Side)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.get('/my-caregivers', authMiddleware, async (req, res) => {
+    try {
+        // Find all active links where logged-in user is the patient
+        const links = await CaregiverLink.find({ 
+            patientId: req.user._id, 
+            status: 'Active' 
+        }).populate('caregiverId', 'name email');
+
+        // Format the response
+        const caregivers = links.map(link => ({
+            linkId: link._id,
+            caregiverId: link.caregiverId._id,
+            name: link.caregiverId.name,
+            email: link.caregiverId.email
+        }));
+
+        res.json(caregivers);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch caregivers' });
+    }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 4. GET PATIENT LIVE DATA (Strictly Online)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.get('/patient/:patientId/data', authMiddleware, async (req, res) => {
