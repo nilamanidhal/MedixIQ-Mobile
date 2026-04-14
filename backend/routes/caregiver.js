@@ -160,7 +160,7 @@ router.get('/patient/:patientId/data', authMiddleware, async (req, res) => {
         // Fetch live data directly from MongoDB
         const [medicines, logs] = await Promise.all([
             Medicine.find({ userId: patientId }),
-            Log.find({ userId: patientId }).sort({ date: -1, time: -1 }).limit(50)
+            Log.find({ userId: patientId }).populate('medicineId', 'name dose').sort({ date: -1, time: -1 })
         ]);
 
         res.json({ medicines, logs });
