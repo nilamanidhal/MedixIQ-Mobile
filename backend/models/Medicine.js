@@ -37,22 +37,25 @@ const medicineSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  isDeleted: {
+    type: Boolean,
+    default: false
+  },
   notes: {
     type: String,
     maxlength: [500, 'Notes cannot exceed 500 characters'],
     trim: true
   },
- // ⭐ OFFLINE STABLE ID
   clientId: {
     type: String,
-    unique: true, // 👈 THIS IS THE KEY FIX
-    sparse: true, // 👈 Allows old items without a clientId (safety)
+    unique: true, 
+    sparse: true, 
     index: true
   },
   // 🔥 NEW FIELDS FOR PAUSE & MUTE
-  isMuted: { type: Boolean, default: false }, // Silent Mode
-  isPaused: { type: Boolean, default: false }, // Treatment Suspended
-  pausedDate: { type: Date, default: null },    // Timestamp when pause started
+  isMuted: { type: Boolean, default: false }, 
+  isPaused: { type: Boolean, default: false }, 
+  pausedDate: { type: Date, default: null },    
 
   condition: {
     type: String,

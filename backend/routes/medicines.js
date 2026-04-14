@@ -112,36 +112,30 @@ router.get('/', authMiddleware, async (req, res) => {
     const now = new Date();
 
     // 1. SILENT AUTO-CLEANUP WITH EXACT TIME CHECK ⏱️
-    // Fetch only active medicines to check their exact expiration minute
-    const activeMedicines = await Medicine.find({ userId: req.user._id, isActive: true });
+    // Only check medicines that are Active AND Not Deleted
+    const activeMedicines = await Medicine.find({ userId: req.user._id, isActive: true, isDeleted: false });
     const expiredIds = [];
 
     for (let med of activeMedicines) {
         if (med.duration && med.duration.endDate) {
             const exactEndDate = new Date(med.duration.endDate);
             
-            // Find the very last dose time for the day (e.g., "22:00")
-            let latestTime = "23:59"; // Default to midnight if times array is missing
+            let latestTime = "23:59";
             if (med.times && med.times.length > 0) {
-                // Sorting strings like "08:00" and "22:00" will put the latest time at the end
                 const sortedTimes = [...med.times].sort();
                 latestTime = sortedTimes[sortedTimes.length - 1]; 
             }
 
-            // Extract hours and minutes (e.g., "22" and "00")
             const [hours, minutes] = latestTime.split(':').map(Number);
-            
-            // Apply that exact time to the end date (adds 59 seconds buffer)
             exactEndDate.setHours(hours, minutes, 59, 999);
 
-            // If right now is past the final dose minute, mark it for deactivation!
+            // If right now is past the final dose minute, mark for deactivation!
             if (now > exactEndDate) {
                 expiredIds.push(med._id);
             }
         }
     }
 
-    // If we found any that just passed their final time, update them in the DB
     if (expiredIds.length > 0) {
         await Medicine.updateMany(
             { _id: { $in: expiredIds } },
@@ -150,8 +144,9 @@ router.get('/', authMiddleware, async (req, res) => {
     }
 
     // 2. FETCH THE FRESH DATA 📦
-    // Fetch again, filtering for isActive: true so the expired ones are hidden
-    const medicines = await Medicine.find({ userId: req.user._id, isActive: true }).sort({ createdAt: -1 });
+    // 🔥 THE FIX: Return EVERYTHING that isn't trashed by the user.
+    // This allows the frontend to receive BOTH active AND expired medicines!
+    const medicines = await Medicine.find({ userId: req.user._id, isDeleted: false }).sort({ createdAt: -1 });
     
     res.json({ medicines });
   } catch (err) {
@@ -205,7 +200,8 @@ router.post('/', authMiddleware, [
                 notes,
                 rxcui,
                 condition: condition || '',
-                isActive: true
+                isActive: true,
+                isDeleted: false
             }
         },
         { 
@@ -227,7 +223,7 @@ router.post('/', authMiddleware, [
 router.get('/:id', authMiddleware, async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(404).json({ message: 'Invalid ID' });
-    const medicine = await Medicine.findOne({ _id: req.params.id, userId: req.user._id });
+    const medicine = await Medicine.findOne({ _id: req.params.id, userId: req.user._id, isDeleted: false });
     if (!medicine) return res.status(404).json({ message: 'Medicine not found' });
     res.json({ medicine });
   } catch (error) { res.status(500).json({ message: 'Server error' }); }
@@ -239,7 +235,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(404).json({ message: 'Invalid ID' });
     
     const medicine = await Medicine.findOneAndUpdate(
-        { _id: req.params.id, userId: req.user._id },
+        { _id: req.params.id, userId: req.user._id, isDeleted: false },
         { $set: req.body },
         { new: true }
     );
@@ -257,7 +253,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     // Soft Delete
     const medicine = await Medicine.findOneAndUpdate(
         { _id: req.params.id, userId: req.user._id },
-        { $set: { isActive: false } },
+        { $set: { isDeleted: true, isActive: false } },
         { new: true }
     );
 
