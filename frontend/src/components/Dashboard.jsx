@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../hooks/useNotifications';
 import { useMedicines } from '../hooks/useMedicines';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { NativeSettings, AndroidSettings, IOSSettings } from 'capacitor-native-settings';
 import { Network } from '@capacitor/network';
-import { Check, AlertCircle, Clock, Circle, Bell } from "lucide-react";
+import { Check, AlertCircle, Clock, Circle, Bell, Users } from "lucide-react";
 import PendingReviewModal from './PendingReviewModal';
 import AiChatbot from './AiChatbot';
 import ProfilePopup from './ProfilePopup';
@@ -50,6 +51,7 @@ const format12Hour = (time24) => {
 };
 
 const Dashboard = () => {
+    const navigate = useNavigate();
     const { t } = useTranslation();
     const { user } = useAuth();
     
@@ -269,20 +271,19 @@ const Dashboard = () => {
                 <div className="flex justify-between items-start">
                     <div>
                         <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight leading-tight">
-                           {t('dashboard.greeting', { name: user?.name?.split(' ')[0] || 'Friend' })}
+                            {t('dashboard.greeting', { name: user?.name?.split(' ')[0] || 'Friend' })}
                         </h1>
                         <p className="text-slate-600 text-sm mt-1.5 font-medium">{t('dashboard.subtitle')}</p>
                     </div>
 
-                    <div className="relative">
-                        <button 
-                            onClick={() => setIsProfileOpen(!isProfileOpen)}
-                            className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-green-600 text-xl font-black shadow-sm border border-white/60 active:scale-95 transition-transform"
-                        >
-                            {user?.name?.[0] || 'U'}
-                        </button>
-                        <ProfilePopup isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
-                    </div>
+                    {/* NEW CAREGIVER / FAMILY HUB BUTTON */}
+                    <button 
+                        onClick={() => navigate('/family')}
+                        className="relative w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm border border-white/60 active:scale-95 transition-transform"
+                    >
+                        {/* Optional: You can add a red dot if they have a pending invite */}
+                        <Users size={24} strokeWidth={2.5} />
+                    </button>
                 </div>
 
                 {/* SYNC STATUS */}

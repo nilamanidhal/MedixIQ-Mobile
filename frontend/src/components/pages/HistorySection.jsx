@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useMedicines } from '../../hooks/useMedicines'; 
-import { Network } from '@capacitor/network';
 import { useAuth } from '../../contexts/AuthContext';
 import { generateDoctorReport } from '../../utils/pdfGenerator';
 import { 
@@ -11,35 +10,52 @@ import {
     ChevronDown, 
     FileText, 
     Download, 
-    Share2 
+    Share2,
+    Activity,
+    CheckCircle2,
+    XCircle
 } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 
 const HistorySection = () => {
     const { t } = useTranslation();
-    const { logs, medicines, updateLogStatus, fetchFullHistory } = useMedicines();
+    const { logs, medicines, updateLogStatus } = useMedicines();
     const { user } = useAuth();
 
-    const [loadingMore, setLoadingMore] = useState(false);
+    // 🟢 NEW: Pagination State
+    const [displayLimit, setDisplayLimit] = useState(15);
     const [isExporting, setIsExporting] = useState(false);
-
-    // 🟢 NEW: Modal State
     const [showReportModal, setShowReportModal] = useState(false);
-    const [reportDays, setReportDays] = useState(7); // Default 7 days
+    const [reportDays, setReportDays] = useState(7);
 
     const now = new Date();
 
     // 1. FILTER: Show Past Logs + Due Pending Logs
-    const visibleLogs = logs.filter(log => {
-        if (log.status !== 'pending') return true; 
-        const logDate = new Date(log.date);
-        return logDate <= now; 
-    }).sort((a, b) => new Date(b.date) - new Date(a.date));
+    const allValidLogs = useMemo(() => {
+        return logs.filter(log => {
+            if (log.status !== 'pending') return true; 
+            const logDate = new Date(log.date);
+            return logDate <= now; 
+        }).sort((a, b) => new Date(b.date) - new Date(a.date));
+    }, [logs, now]);
+
+    // Calculate Quick Stats
+    const stats = useMemo(() => {
+        return {
+            taken: allValidLogs.filter(l => l.status === 'taken').length,
+            missed: allValidLogs.filter(l => l.status === 'missed' || l.status === 'skipped').length,
+            total: allValidLogs.filter(l => l.status !== 'pending').length
+        };
+    }, [allValidLogs]);
+
+    // Slice for pagination
+    const visibleLogs = allValidLogs.slice(0, displayLimit);
+    const hasMoreLogs = displayLimit < allValidLogs.length;
 
     // 2. GROUP BY DATE HELPER
-    const groupLogsByDate = (logs) => {
+    const groupLogsByDate = (logsArray) => {
         const groups = {};
-        logs.forEach(log => {
+        logsArray.forEach(log => {
             const dateObj = new Date(log.date);
             const dateStr = dateObj.toLocaleDateString([], { 
                 weekday: 'long', month: 'short', day: 'numeric' 
@@ -59,28 +75,19 @@ const HistorySection = () => {
         return groups;
     };
 
-    const groupedLogs = groupLogsByDate(visibleLogs.slice(0, loadingMore ? undefined : 20));
+    const groupedLogs = groupLogsByDate(visibleLogs);
 
-    const handleLoadMore = async () => {
-        const status = await Network.getStatus();
-        if (!status.connected) {
-            alert("Please connect to internet to view older history.");
-            return;
-        }
-        setLoadingMore(true);
-        await fetchFullHistory();
-        setLoadingMore(false);
+    const handleLoadMore = () => {
+        // Instantly show 15 more logs from local state
+        setDisplayLimit(prev => prev + 15);
     };
 
-    // 🟢 3. TRIGGER EXPORT (Called from Modal)
+    // 3. TRIGGER EXPORT
     const triggerExport = async (action) => {
         setIsExporting(true);
-        setShowReportModal(false); // Close modal immediately
+        setShowReportModal(false); 
         try {
-            // Call generator with days and action
             const result = await generateDoctorReport(user, medicines, logs, reportDays, action);
-            
-            // If download, show success message (Share handles itself)
             if (action === 'download' && result.success) {
                 alert(`✅ ${result.message}`);
             }
@@ -93,201 +100,193 @@ const HistorySection = () => {
     };
 
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-24 relative">
+        <div className="min-h-screen bg-slate-50 pb-24">
             
-            {/* Header */}
-            <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <Clock className="text-blue-500" size={20} /> {t('history.title')}
-                </h2>
-                {/* 🟢 OPEN MODAL BUTTON */}
-                <button 
-                    onClick={() => setShowReportModal(true)}
-                    disabled={isExporting}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 shadow-sm active:scale-95 transition-all hover:bg-slate-50 hover:text-blue-600"
-                >
-                    {isExporting ? (
-                         <span className="animate-spin">⌛</span>
-                    ) : (
-                         <FileText size={14} />
-                    )}
-                    {t('history.report')}
-                </button>
-            </div>
-
-            {/* List Content */}
-            {Object.keys(groupedLogs).length > 0 ? (
-                <div>
-                    {Object.entries(groupedLogs).map(([dateLabel, dayLogs]) => (
-                        <div key={dateLabel}>
-                            {/* Sticky Date Header */}
-                            <div className="sticky top-0 z-10 bg-slate-100/90 backdrop-blur-sm px-5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wide border-y border-slate-200/50">
-                                {dateLabel}
-                            </div>
-
-                            {/* Logs for this Date */}
-                            <div className="divide-y divide-slate-100">
-                                {dayLogs.map((log) => {
-                                    const isPending = log.status === 'pending';
-                                    const isTaken = log.status === 'taken';
-                                    const isMissed = log.status === 'missed' || log.status === 'skipped';
-
-                                    return (
-                                        <div key={log._id} className={`flex justify-between items-center p-4 transition-colors ${isPending ? 'bg-orange-50/30' : 'hover:bg-slate-50'}`}>
-                                            
-                                            {/* Left Info */}
-                                            <div className="flex items-center gap-4">
-                                                <div className={`w-2 h-2 rounded-full ${
-                                                    isTaken ? 'bg-green-500' : isMissed ? 'bg-red-500' : 'bg-orange-400 animate-pulse'
-                                                }`}></div>
-                                                
-                                                <div>
-                                                    <p className={`font-semibold text-sm ${isPending ? 'text-slate-900' : 'text-slate-700'}`}>
-                                                        {log.medicineId?.name || t('common.unknown')}
-                                                        {log.pendingSync && (
-                                                            <span className="ml-2 text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
-                                                                {t('common.syncing')}
-                                                            </span>
-                                                        )}
-                                                    </p>
-                                                    <p className="text-xs text-slate-400 mt-0.5 font-medium flex items-center">
-                                                        {log.time} 
-                                                        {isPending && <span className="ml-1 text-orange-500 font-bold">• {t('history.dueNow')}</span>}
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            {/* Right Actions / Status */}
-                                            <div>
-                                                {isPending ? (
-                                                    <div className="flex gap-2">
-                                                        <button 
-                                                            onClick={() => updateLogStatus(log._id, 'taken')} 
-                                                            className="w-9 h-9 rounded-full bg-green-100 text-green-600 flex items-center justify-center hover:bg-green-200 active:scale-90 transition-all shadow-sm"
-                                                            title={t('history.markTaken')}
-                                                        >
-                                                            <Check size={18} strokeWidth={3} />
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => updateLogStatus(log._id, 'missed')} 
-                                                            className="w-9 h-9 rounded-full bg-red-100 text-red-600 flex items-center justify-center hover:bg-red-200 active:scale-90 transition-all shadow-sm"
-                                                            title={t('history.markMissed')}
-                                                        >
-                                                            <X size={18} strokeWidth={3} />
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <div className={`px-3 py-1 rounded-lg text-xs font-bold border flex items-center gap-1.5 ${
-                                                        isTaken 
-                                                            ? 'bg-green-50 text-green-700 border-green-200' 
-                                                            : 'bg-red-50 text-red-700 border-red-200'
-                                                    }`}>
-                                                        {isTaken ? <Check size={12} /> : <X size={12} />}
-                                                        {log.status.toUpperCase()}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                        <Calendar className="text-slate-300" size={32} />
+            {/* 🟢 PREMIUM HEADER */}
+            <div className="bg-gradient-to-b from-blue-600 to-blue-700 px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-md sticky top-0 z-30">
+                <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h1 className="text-2xl font-extrabold text-white flex items-center gap-2">
+                            <Activity size={26} className="text-blue-200" /> 
+                            {t('history.title', 'Log History')}
+                        </h1>
+                        <p className="text-blue-200 text-sm font-medium mt-1">Track your medication journey</p>
                     </div>
-                    <p className="text-slate-500 font-medium">{t('history.noHistory')}</p>
-                    <p className="text-slate-400 text-xs mt-1 max-w-[200px]">
-                        {t('history.noHistoryDesc')}
-                    </p>
+                    
+                    <button 
+                        onClick={() => setShowReportModal(true)}
+                        disabled={isExporting}
+                        className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl text-sm font-bold text-white transition-all active:scale-95 border border-white/20 shadow-sm"
+                    >
+                        {isExporting ? <span className="animate-spin">⌛</span> : <FileText size={18} />}
+                        {t('history.report', 'Report')}
+                    </button>
                 </div>
-            )}
 
-            {/* Load More Footer */}
-            <div className="p-4 border-t border-slate-100 bg-slate-50 text-center">
-                <button 
-                    onClick={handleLoadMore} 
-                    disabled={loadingMore}
-                    className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center justify-center gap-1 w-full py-2"
-                >
-                    {loadingMore ? (
-                        <span className="animate-pulse">{t('common.loading')}</span>
-                    ) : (
-                        <>
-                            {t('history.loadOlder')} <ChevronDown size={14} />
-                        </>
-                    )}
-                </button>
+                {/* Quick Stats Cards */}
+                <div className="grid grid-cols-2 gap-3 mt-4">
+                    <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
+                        <div className="flex items-center gap-2 text-blue-100 mb-1">
+                            <CheckCircle2 size={16} className="text-emerald-400" />
+                            <span className="text-xs font-bold uppercase tracking-wider">Taken</span>
+                        </div>
+                        <p className="text-2xl font-black text-white">{stats.taken}</p>
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
+                        <div className="flex items-center gap-2 text-blue-100 mb-1">
+                            <XCircle size={16} className="text-red-400" />
+                            <span className="text-xs font-bold uppercase tracking-wider">Missed</span>
+                        </div>
+                        <p className="text-2xl font-black text-white">{stats.missed}</p>
+                    </div>
+                </div>
             </div>
 
-            {/* 🟢 4. REPORT SELECTION MODAL */}
+            {/* 🟢 TIMELINE CONTENT */}
+            <div className="px-4 -mt-2 relative z-10">
+                {Object.keys(groupedLogs).length > 0 ? (
+                    <div className="space-y-6 pt-6">
+                        {Object.entries(groupedLogs).map(([dateLabel, dayLogs]) => (
+                            <div key={dateLabel} className="relative">
+                                
+                                {/* Timeline Line (Visual) */}
+                                <div className="absolute left-[23px] top-8 bottom-0 w-0.5 bg-slate-200 z-0 hidden sm:block"></div>
+
+                                {/* Date Badge */}
+                                <div className="sticky top-[100px] z-20 mb-4 inline-flex items-center gap-2 bg-slate-100 border border-slate-200 px-4 py-1.5 rounded-full text-xs font-bold text-slate-500 uppercase tracking-wider shadow-sm ml-2">
+                                    <Calendar size={14} />
+                                    {dateLabel}
+                                </div>
+
+                                {/* Logs Cards */}
+                                <div className="space-y-3 sm:ml-12 ml-2">
+                                    {dayLogs.map((log) => {
+                                        const isPending = log.status === 'pending';
+                                        const isTaken = log.status === 'taken';
+                                        const isMissed = log.status === 'missed' || log.status === 'skipped';
+
+                                        return (
+                                            <div key={log._id} className={`relative bg-white rounded-2xl p-4 border shadow-sm transition-all flex items-center justify-between ${isPending ? 'border-orange-200 shadow-orange-100/50' : 'border-slate-100 hover:border-blue-200'}`}>
+                                                
+                                                <div className="flex items-center gap-4">
+                                                    {/* Time Block */}
+                                                    <div className="text-center min-w-[50px]">
+                                                        <p className="text-sm font-black text-slate-800">{log.time}</p>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase">Time</p>
+                                                    </div>
+
+                                                    {/* Divider */}
+                                                    <div className="w-px h-8 bg-slate-100"></div>
+
+                                                    {/* Medicine Info */}
+                                                    <div>
+                                                        <p className={`font-bold text-base ${isPending ? 'text-slate-900' : 'text-slate-700'}`}>
+                                                            {log.medicineId?.name || t('common.unknown')}
+                                                        </p>
+                                                        {isPending && <span className="text-xs font-bold text-orange-500 flex items-center gap-1 mt-0.5"><Clock size={12}/> Due Now</span>}
+                                                    </div>
+                                                </div>
+
+                                                {/* Status / Actions */}
+                                                <div>
+                                                    {isPending ? (
+                                                        <div className="flex gap-2">
+                                                            <button onClick={() => updateLogStatus(log._id, 'taken')} className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 active:scale-90 transition-all shadow-sm border border-emerald-100">
+                                                                <Check size={20} strokeWidth={3} />
+                                                            </button>
+                                                            <button onClick={() => updateLogStatus(log._id, 'missed')} className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-100 active:scale-90 transition-all shadow-sm border border-red-100">
+                                                                <X size={20} strokeWidth={3} />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 ${isTaken ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+                                                            {isTaken ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                                                            {log.status.toUpperCase()}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+                        <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4 border-4 border-white shadow-sm">
+                            <FileText className="text-slate-300" size={36} />
+                        </div>
+                        <p className="text-slate-600 font-bold text-lg">{t('history.noHistory', 'No History Yet')}</p>
+                        <p className="text-slate-400 text-sm mt-1 max-w-[250px]">
+                            {t('history.noHistoryDesc', 'Your medication logs will appear here once you start taking them.')}
+                        </p>
+                    </div>
+                )}
+
+                {/* 🟢 LOAD MORE BUTTON */}
+                {hasMoreLogs && (
+                    <div className="mt-8 mb-10 flex justify-center">
+                        <button 
+                            onClick={handleLoadMore} 
+                            className="bg-white border-2 border-blue-100 text-blue-600 px-6 py-3 rounded-2xl font-bold hover:bg-blue-50 active:scale-95 transition-all flex items-center gap-2 shadow-sm"
+                        >
+                            {t('history.loadOlder', 'Load Older History')} <ChevronDown size={18} />
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {/* 🟢 REPORT MODAL */}
             {showReportModal && (
-                <div className="fixed inset-0 z-52 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-white w-full max-w-sm rounded-2xl p-5 shadow-2xl animate-in slide-in-from-bottom-10 duration-300">
-                        
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-bold text-slate-800">{t('history.exportReport')}</h3>
-                            <button onClick={() => setShowReportModal(false)} className="text-slate-400 hover:text-slate-600">
-                                <X size={20} />
+                <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom-10 duration-300">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-black text-slate-800">{t('history.exportReport', 'Export Report')}</h3>
+                            <button onClick={() => setShowReportModal(false)} className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors">
+                                <X size={18} />
                             </button>
                         </div>
                         
-                        <p className="text-sm text-slate-500 mb-4 font-medium">{t('history.selectRange')}</p>
+                        <p className="text-sm text-slate-500 mb-4 font-bold">{t('history.selectRange', 'Select Time Range')}</p>
                         
-                        <div className="grid grid-cols-2 gap-3 mb-6">
+                        <div className="grid grid-cols-2 gap-3 mb-8">
                             <button 
                                 onClick={() => setReportDays(7)}
-                                className={`py-2 rounded-xl text-sm font-bold border transition-all ${
-                                    reportDays === 7 
-                                    ? 'bg-blue-50 border-blue-500 text-blue-600 ring-1 ring-blue-500' 
-                                    : 'bg-white border-slate-200 text-slate-600'
+                                className={`py-3 rounded-2xl text-sm font-bold border-2 transition-all ${
+                                    reportDays === 7 ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-slate-100 text-slate-500 hover:border-slate-200'
                                 }`}
                             >
-                                {t('history.last7Days')}
+                                {t('history.last7Days', 'Last 7 Days')}
                             </button>
                             <button 
                                 onClick={() => setReportDays(30)}
-                                className={`py-2 rounded-xl text-sm font-bold border transition-all ${
-                                    reportDays === 30 
-                                    ? 'bg-blue-50 border-blue-500 text-blue-600 ring-1 ring-blue-500' 
-                                    : 'bg-white border-slate-200 text-slate-600'
+                                className={`py-3 rounded-2xl text-sm font-bold border-2 transition-all ${
+                                    reportDays === 30 ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-slate-100 text-slate-500 hover:border-slate-200'
                                 }`}
                             >
-                                {t('history.last30Days')}
+                                {t('history.last30Days', 'Last 30 Days')}
                             </button>
                         </div>
 
                         <div className="space-y-3">
-                            {/* SHARE BUTTON */}
-                            <button 
-                                onClick={() => triggerExport('share')}
-                                className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
-                            >
-                                <Share2 size={18} /> {t('history.shareReport')}
+                            <button onClick={() => triggerExport('share')} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-md shadow-blue-200">
+                                <Share2 size={20} /> {t('history.shareReport', 'Share Report')}
                             </button>
-                            
-                            {/* DOWNLOAD BUTTON */}
-                            <button 
-                                onClick={() => triggerExport('download')}
-                                className="w-full py-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-slate-50"
-                            >
-                                <Download size={18} /> {t('history.saveToDevice')}
+                            <button onClick={() => triggerExport('download')} className="w-full py-4 bg-slate-50 border border-slate-200 text-slate-700 rounded-2xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-slate-100">
+                                <Download size={20} /> {t('history.saveToDevice', 'Save to Device')}
                             </button>
                         </div>
-
                     </div>
                 </div>
             )}
-
         </div>
     );
 };
 
 export default HistorySection;
+
 
 
 
@@ -310,13 +309,14 @@ export default HistorySection;
 //     Clock, 
 //     Calendar, 
 //     ChevronDown, 
-//     AlertCircle,
-//     FileText,
-//     Download,
-//     Share2
+//     FileText, 
+//     Download, 
+//     Share2 
 // } from "lucide-react";
+// import { useTranslation } from 'react-i18next';
 
 // const HistorySection = () => {
+//     const { t } = useTranslation();
 //     const { logs, medicines, updateLogStatus, fetchFullHistory } = useMedicines();
 //     const { user } = useAuth();
 
@@ -345,7 +345,6 @@ export default HistorySection;
 //                 weekday: 'long', month: 'short', day: 'numeric' 
 //             });
             
-//             // Check for Today/Yesterday
 //             const todayStr = new Date().toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
 //             const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
 //             const yesterdayStr = yesterday.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
@@ -373,12 +372,18 @@ export default HistorySection;
 //         setLoadingMore(false);
 //     };
 
-//     //  HANDLE EXPORT
-//     const handleExportPDF = async () => {
+//     // 🟢 3. TRIGGER EXPORT (Called from Modal)
+//     const triggerExport = async (action) => {
 //         setIsExporting(true);
+//         setShowReportModal(false); // Close modal immediately
 //         try {
-//             // Pass User, Medicines, and ALL logs (not just visible ones)
-//            await generateDoctorReport(user, medicines, logs);
+//             // Call generator with days and action
+//             const result = await generateDoctorReport(user, medicines, logs, reportDays, action);
+            
+//             // If download, show success message (Share handles itself)
+//             if (action === 'download' && result.success) {
+//                 alert(`✅ ${result.message}`);
+//             }
 //         } catch (error) {
 //             console.error("PDF Generation failed", error);
 //             alert("Failed to generate report.");
@@ -388,16 +393,16 @@ export default HistorySection;
 //     };
 
 //     return (
-//         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-24">
+//         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-24 relative">
             
 //             {/* Header */}
 //             <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
 //                 <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-//                     <Clock className="text-blue-500" size={20} /> History Log
+//                     <Clock className="text-blue-500" size={20} /> {t('history.title')}
 //                 </h2>
-//                 {/* 🟢 3. EXPORT BUTTON */}
+//                 {/* 🟢 OPEN MODAL BUTTON */}
 //                 <button 
-//                     onClick={handleExportPDF}
+//                     onClick={() => setShowReportModal(true)}
 //                     disabled={isExporting}
 //                     className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 shadow-sm active:scale-95 transition-all hover:bg-slate-50 hover:text-blue-600"
 //                 >
@@ -406,7 +411,7 @@ export default HistorySection;
 //                     ) : (
 //                          <FileText size={14} />
 //                     )}
-//                     {isExporting ? "Saving..." : "Report"}
+//                     {t('history.report')}
 //                 </button>
 //             </div>
 
@@ -438,16 +443,16 @@ export default HistorySection;
                                                 
 //                                                 <div>
 //                                                     <p className={`font-semibold text-sm ${isPending ? 'text-slate-900' : 'text-slate-700'}`}>
-//                                                         {log.medicineId?.name || "Unknown Medicine"}
+//                                                         {log.medicineId?.name || t('common.unknown')}
 //                                                         {log.pendingSync && (
 //                                                             <span className="ml-2 text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
-//                                                                 Syncing...
+//                                                                 {t('common.syncing')}
 //                                                             </span>
 //                                                         )}
 //                                                     </p>
 //                                                     <p className="text-xs text-slate-400 mt-0.5 font-medium flex items-center">
 //                                                         {log.time} 
-//                                                         {isPending && <span className="ml-1 text-orange-500 font-bold">• Due Now</span>}
+//                                                         {isPending && <span className="ml-1 text-orange-500 font-bold">• {t('history.dueNow')}</span>}
 //                                                     </p>
 //                                                 </div>
 //                                             </div>
@@ -459,14 +464,14 @@ export default HistorySection;
 //                                                         <button 
 //                                                             onClick={() => updateLogStatus(log._id, 'taken')} 
 //                                                             className="w-9 h-9 rounded-full bg-green-100 text-green-600 flex items-center justify-center hover:bg-green-200 active:scale-90 transition-all shadow-sm"
-//                                                             title="Mark Taken"
+//                                                             title={t('history.markTaken')}
 //                                                         >
 //                                                             <Check size={18} strokeWidth={3} />
 //                                                         </button>
 //                                                         <button 
 //                                                             onClick={() => updateLogStatus(log._id, 'missed')} 
 //                                                             className="w-9 h-9 rounded-full bg-red-100 text-red-600 flex items-center justify-center hover:bg-red-200 active:scale-90 transition-all shadow-sm"
-//                                                             title="Mark Missed"
+//                                                             title={t('history.markMissed')}
 //                                                         >
 //                                                             <X size={18} strokeWidth={3} />
 //                                                         </button>
@@ -495,9 +500,9 @@ export default HistorySection;
 //                     <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
 //                         <Calendar className="text-slate-300" size={32} />
 //                     </div>
-//                     <p className="text-slate-500 font-medium">No history yet.</p>
+//                     <p className="text-slate-500 font-medium">{t('history.noHistory')}</p>
 //                     <p className="text-slate-400 text-xs mt-1 max-w-[200px]">
-//                         Your medication logs will appear here organized by date.
+//                         {t('history.noHistoryDesc')}
 //                     </p>
 //                 </div>
 //             )}
@@ -510,113 +515,76 @@ export default HistorySection;
 //                     className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center justify-center gap-1 w-full py-2"
 //                 >
 //                     {loadingMore ? (
-//                         <span className="animate-pulse">Loading...</span>
+//                         <span className="animate-pulse">{t('common.loading')}</span>
 //                     ) : (
 //                         <>
-//                             Load Older History <ChevronDown size={14} />
+//                             {t('history.loadOlder')} <ChevronDown size={14} />
 //                         </>
 //                     )}
 //                 </button>
 //             </div>
 
+//             {/* 🟢 4. REPORT SELECTION MODAL */}
+//             {showReportModal && (
+//                 <div className="fixed inset-0 z-52 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200">
+//                     <div className="bg-white w-full max-w-sm rounded-2xl p-5 shadow-2xl animate-in slide-in-from-bottom-10 duration-300">
+                        
+//                         <div className="flex justify-between items-center mb-4">
+//                             <h3 className="text-lg font-bold text-slate-800">{t('history.exportReport')}</h3>
+//                             <button onClick={() => setShowReportModal(false)} className="text-slate-400 hover:text-slate-600">
+//                                 <X size={20} />
+//                             </button>
+//                         </div>
+                        
+//                         <p className="text-sm text-slate-500 mb-4 font-medium">{t('history.selectRange')}</p>
+                        
+//                         <div className="grid grid-cols-2 gap-3 mb-6">
+//                             <button 
+//                                 onClick={() => setReportDays(7)}
+//                                 className={`py-2 rounded-xl text-sm font-bold border transition-all ${
+//                                     reportDays === 7 
+//                                     ? 'bg-blue-50 border-blue-500 text-blue-600 ring-1 ring-blue-500' 
+//                                     : 'bg-white border-slate-200 text-slate-600'
+//                                 }`}
+//                             >
+//                                 {t('history.last7Days')}
+//                             </button>
+//                             <button 
+//                                 onClick={() => setReportDays(30)}
+//                                 className={`py-2 rounded-xl text-sm font-bold border transition-all ${
+//                                     reportDays === 30 
+//                                     ? 'bg-blue-50 border-blue-500 text-blue-600 ring-1 ring-blue-500' 
+//                                     : 'bg-white border-slate-200 text-slate-600'
+//                                 }`}
+//                             >
+//                                 {t('history.last30Days')}
+//                             </button>
+//                         </div>
+
+//                         <div className="space-y-3">
+//                             {/* SHARE BUTTON */}
+//                             <button 
+//                                 onClick={() => triggerExport('share')}
+//                                 className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+//                             >
+//                                 <Share2 size={18} /> {t('history.shareReport')}
+//                             </button>
+                            
+//                             {/* DOWNLOAD BUTTON */}
+//                             <button 
+//                                 onClick={() => triggerExport('download')}
+//                                 className="w-full py-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-slate-50"
+//                             >
+//                                 <Download size={18} /> {t('history.saveToDevice')}
+//                             </button>
+//                         </div>
+
+//                     </div>
+//                 </div>
+//             )}
+
 //         </div>
 //     );
-// };
-
-// export default HistorySection;
-
-
-
-
-
-
-
-// import React, { useState } from 'react';
-// import { useMedicines } from '../../hooks/useMedicines'; 
-// import { Network } from '@capacitor/network';
-
-// const HistorySection = () => {
-//   const { logs, updateLogStatus, fetchFullHistory } = useMedicines();
-//   const [loadingMore, setLoadingMore] = useState(false);
-
-//   // 1. Get Current Time
-//   const now = new Date();
-
-//   // 2. FILTER & SORT: 
-//   // - Show ALL 'taken' or 'missed' logs (Past history)
-//   // - Show 'pending' logs ONLY if they are due (Time has passed)
-//   const visibleLogs = logs.filter(log => {
-//       if (log.status !== 'pending') return true; // Always show finished logs
-//       const logDate = new Date(log.date);
-//       return logDate <= now; // Only show pending if time has passed
-//   }).sort((a, b) => new Date(b.date) - new Date(a.date));
-
-//   const handleLoadMore = async () => {
-//       const status = await Network.getStatus();
-//       if (!status.connected) {
-//           alert("Please connect to internet to view older history.");
-//           return;
-//       }
-//       setLoadingMore(true);
-//       await fetchFullHistory();
-//       setLoadingMore(false);
-//   };
-
-//   return (
-//     <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
-//       <div className="flex justify-between items-center mb-4">
-//         <h2 className="text-2xl font-bold text-gray-900">📜 History</h2>
-//       </div>
-      
-//       {visibleLogs.length > 0 ? (
-//         <div className="space-y-4">
-//           {visibleLogs.slice(0, loadingMore ? undefined : 20).map((log) => (
-//             <div key={log._id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-//               <div>
-//                 <p className="font-semibold text-gray-800">
-//                     {log.medicineId?.name || "Medicine"} 
-//                     {/* Show 'Due' label for pending items */}
-//                     {log.status === 'pending' && <span className="text-xs text-orange-600 bg-orange-100 px-2 py-0.5 rounded ml-2 font-bold">● Due</span>}
-//                     {log.pendingSync && <span className="text-xs text-gray-400 ml-2"> (Offline)</span>}
-//                 </p>
-//                 <p className="text-sm text-gray-600">
-//                     {new Date(log.date).toLocaleDateString()} at {log.time}
-//                 </p>
-//               </div>
-              
-//               <div>
-//                 {log.status === 'pending' ? (
-//                   <div className="space-x-2">
-//                     <button onClick={() => updateLogStatus(log._id, 'taken')} className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600">Taken</button>
-//                     <button onClick={() => updateLogStatus(log._id, 'missed')} className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600">Missed</button>
-//                   </div>
-//                 ) : (
-//                   <span className={`px-3 py-1 rounded text-white text-sm ${log.status === 'taken' ? 'bg-green-600' : 'bg-red-600'}`}>
-//                     {log.status.toUpperCase()}
-//                   </span>
-//                 )}
-//               </div>
-//             </div>
-//           ))}
-//         </div>
-//       ) : (
-//         <div className="text-center py-8 text-gray-500">
-//             <p>No due medicines or history.</p>
-//             <p className="text-xs mt-1">Upcoming medicines will appear here when due.</p>
-//         </div>
-//       )}
-
-//       <div className="mt-4 text-center">
-//           <button 
-//             onClick={handleLoadMore} 
-//             disabled={loadingMore}
-//             className="text-blue-600 hover:underline text-sm font-medium"
-//           >
-//             {loadingMore ? "Loading..." : "Load Full History"}
-//           </button>
-//       </div>
-//     </div>
-//   );
 // };
 
 // export default HistorySection;

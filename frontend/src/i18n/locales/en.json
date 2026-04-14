@@ -89,7 +89,8 @@
   "common": {
     "syncing": "Syncing...",
     "close": "Close",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "loading": "Loading..."
   },
   "review": {
     "title": "Daily Review",

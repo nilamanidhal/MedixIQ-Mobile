@@ -27,6 +27,8 @@ import ChangePassword from './components/pages/ChangePassword';
 import ForgotPassword from './components/pages/ForgotPassword';
 import UpdatePrompt from './components/UpdatePrompt';
 import LegalAndPrivacy from './components/pages/LegalAndPrivacy';
+import FamilyHub from './components/pages/FamilyHub';
+import CaregiverPortal from './components/pages/CaregiverPortal';
 
 // 🟢 1. Create a Helper Component to Handle Back Button
 const BackButtonHandler = () => {
@@ -153,6 +155,18 @@ function App() {
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/dashboard" />} />
 
+          <Route path="/family" element={
+              <ProtectedRoute>
+                  <FamilyHub />
+              </ProtectedRoute>
+          } />
+          
+          <Route path="/caregiver/patient/:patientId" element={
+              <ProtectedRoute>
+                  <CaregiverPortal />
+              </ProtectedRoute>
+          } />
+          
         </Routes>
       </BrowserRouter>
       </SentinelProvider>
