@@ -1,3 +1,4 @@
+import { App as CapacitorApp } from '@capacitor/app';
 import { auth } from '../firebase';
 import { 
     createUserWithEmailAndPassword, 
@@ -50,6 +51,41 @@ export const AuthProvider = ({ children }) => {
         // Cleanup listener when app closes
         return () => unsubscribe();
     }, []);
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 🩺 THE HEARTBEAT SYSTEM (Active User Tracking)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    useEffect(() => {
+        // Only ping if the user is actually logged in
+        if (!token) return;
+
+        const sendHeartbeat = async () => {
+            try {
+                // Silently ping the backend without blocking the UI
+                await axios.post('/auth/heartbeat');
+            } catch (error) {
+                console.log("Heartbeat failed, user might be offline");
+            }
+        };
+
+        // 1. Send a ping immediately when the app starts
+        sendHeartbeat();
+
+        // 2. Send a ping every time the user brings the app back to the screen
+        let appStateListener;
+        CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+            if (isActive) {
+                sendHeartbeat();
+            }
+        }).then(listener => {
+            appStateListener = listener;
+        });
+
+        // Cleanup listener when app closes
+        return () => {
+            if (appStateListener) appStateListener.remove();
+        };
+    }, [token]);
     
     // We start loading as FALSE because we trust the local storage first.
     // This allows the app to render the Dashboard immediately even if offline.

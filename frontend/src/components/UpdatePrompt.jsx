@@ -4,7 +4,7 @@ import { remoteConfig } from '../firebase';
 import { fetchAndActivate, getString, getBoolean } from "firebase/remote-config";
 
 // 🟢 CHANGE THIS STRING EVERY TIME YOU BUILD A NEW APK!
-const CURRENT_APP_VERSION = "1.3.0";
+const CURRENT_APP_VERSION = "1.5.0";
 
 const UpdatePrompt = () => {
     const [updateInfo, setUpdateInfo] = useState(null);
