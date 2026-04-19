@@ -13,6 +13,7 @@ const contactRoutes=require('./routes/contact');
 const reportRoutes=require('./routes/reports')
 const emergencyRoutes = require('./routes/emergency');
 const caregiverRoutes = require('./routes/caregiver');
+const drugCheckRoutes = require('./routes/drugCheck');
 
 dotenv.config();
 console.log("ENV LOADED:", process.env.VAPID_SUBJECT);
@@ -46,6 +47,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/contact',contactRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/caregiver', caregiverRoutes);
+app.use('/api/drug', drugCheckRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
