@@ -23,7 +23,7 @@ const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 export const auth = getAuth(app);
 
-// 🔥 EXPORT REMOTE CONFIG
+//  EXPORT REMOTE CONFIG
 export const remoteConfig = getRemoteConfig(app);
 
 // Make it fetch quickly (good for update prompts)

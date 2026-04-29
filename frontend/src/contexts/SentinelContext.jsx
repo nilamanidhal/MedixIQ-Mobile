@@ -18,7 +18,7 @@ export const SentinelProvider = ({ children }) => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             
-            // 🔥 FIX: Combine publicData and the token into one object
+            // FIX: Combine publicData and the token into one object
             const fullData = {
                 ...res.data.profile.publicData,
                 token: res.data.profile.token
@@ -58,5 +58,4 @@ export const SentinelProvider = ({ children }) => {
     );
 };
 
-// Custom hook to use the shared context everywhere
 export const useSentinelContext = () => useContext(SentinelContext);

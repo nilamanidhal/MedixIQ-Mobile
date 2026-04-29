@@ -69,7 +69,7 @@
   },
   "auth": {
     "welcomeBack": "वापसी पर स्वागत है", "loginSubtitle": "अपनी स्वास्थ्य यात्रा जारी रखने के लिए साइन इन करें", "email": "ईमेल पता", "password": "पासवर्ड", "forgotPassword": "पासवर्ड भूल गए?", "loginBtn": "साइन इन करें", "dontHaveAccount": "खाता नहीं है?", "register": "साइन अप करें",
-    "createAccount": "खाता बनाएं", "registerSubtitle": "MedMind के साथ अपनी यात्रा शुरू करें", "name": "पूरा नाम", "age": "उम्र", "gender": "लिंग", "passwordMin": "पासवर्ड (न्यूनतम 6 वर्ण)", "confirmPassword": "पासवर्ड की पुष्टि करें", "alreadyHaveAccount": "क्या पहले से खाता है?", "login": "लॉग इन करें"
+    "createAccount": "खाता बनाएं", "registerSubtitle": "MedixIQ के साथ अपनी यात्रा शुरू करें", "name": "पूरा नाम", "age": "उम्र", "gender": "लिंग", "passwordMin": "पासवर्ड (न्यूनतम 6 वर्ण)", "confirmPassword": "पासवर्ड की पुष्टि करें", "alreadyHaveAccount": "क्या पहले से खाता है?", "login": "लॉग इन करें"
   },
   "more": {
     "safety": "सुरक्षा और आपातकाल", "medicalRecords": "चिकित्सा रिकॉर्ड", "account": "खाता और सहायता", "logout": "लॉग आउट"

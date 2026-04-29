@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }) => {
     
     const [token, setToken] = useState(() => localStorage.getItem('token') || null);
 
-    // 🔥 THE MAGIC FIX: Listen for background token refreshes automatically!
+    // THE MAGIC FIX: Listen for background token refreshes automatically!
     useEffect(() => {
         const unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // 🩺 THE HEARTBEAT SYSTEM (Active User Tracking)
+    // THE HEARTBEAT SYSTEM (Active User Tracking)
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     useEffect(() => {
         // Only ping if the user is actually logged in
@@ -134,12 +134,12 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-// 🔥 NEW FIREBASE LOGIN
+// NEW FIREBASE LOGIN
     const login = async (email, password) => {
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             
-            // 🚨 STRICT CHECK: Is the email actually verified?
+            // STRICT CHECK: Is the email actually verified?
             if (!userCredential.user.emailVerified) {
                 await signOut(auth); // Log them back out instantly
                 return { success: false, message: "Please verify your email address. Check your inbox!" };
@@ -166,13 +166,13 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    // 🔥 NEW FIREBASE REGISTER
+    // NEW FIREBASE REGISTER
    const register = async (userData) => {
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
             const firebaseToken = await userCredential.user.getIdToken();
 
-            // 🚨 SEND THE VERIFICATION EMAIL
+            // SEND THE VERIFICATION EMAIL
             await sendEmailVerification(userCredential.user);
 
             // Create their profile in your MongoDB database
@@ -205,17 +205,17 @@ export const AuthProvider = ({ children }) => {
     //LOGOUT
     const logout = async () => {
         try {
-        // 🛑 1. CANCEL ALL SCHEDULED ALARMS
+        // 1. CANCEL ALL SCHEDULED ALARMS
         // We get all pending notifications and cancel them immediately.
         const pending = await LocalNotifications.getPending();
         if (pending.notifications.length > 0) {
             await LocalNotifications.cancel(pending);
-            console.log("🔔 All alarms cancelled on logout");
+            console.log("All alarms cancelled on logout");
         }
     } catch (error) {
         console.error("Error cancelling notifications:", error);
     }
-       // ✅ localStorage clear
+       // localStorage clear
     localStorage.removeItem('token');
     localStorage.removeItem('user_data');
     localStorage.removeItem('cached_medicines');

@@ -30,7 +30,7 @@ import LegalAndPrivacy from './components/pages/LegalAndPrivacy';
 import FamilyHub from './components/pages/FamilyHub';
 import CaregiverPortal from './components/pages/CaregiverPortal';
 
-// 🟢 1. Create a Helper Component to Handle Back Button
+//  1. Create a Helper Component to Handle Back Button
 const BackButtonHandler = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -75,7 +75,7 @@ const BackButtonHandler = () => {
   return null;
 };
 
-// --- 🔒 Protected Route (For App Pages) ---
+// ---  Protected Route (For App Pages) ---
 // If NOT logged in -> Go to Login
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -86,7 +86,7 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-// --- 🔓 Public Route (For Login Page) ---
+// ---  Public Route (For Login Page) ---
 // If ALREADY logged in -> Go to Dashboard
 // (This fixes your issue!)
 const PublicRoute = ({ children }) => {
@@ -104,15 +104,15 @@ function App() {
       <SentinelProvider>
       <BrowserRouter>
 
-      {/* ✅ PLACE IT HERE: Inside Router, Outside Routes */}
+      {/*  PLACE IT HERE: Inside Router, Outside Routes */}
         <BackButtonHandler />
         <UpdatePrompt />
         <Routes>
 
-          {/* 🔥 PUBLIC EMERGENCY ROUTE (NO AUTH WHATSOEVER) */}
+          {/*  PUBLIC EMERGENCY ROUTE (NO AUTH WHATSOEVER) */}
           <Route path="/emergency/:token" element={<PublicEmergencyPage />} />
           
-          {/* 🔥 WRAP LOGIN IN PUBLIC ROUTE */}
+          {/*  WRAP LOGIN IN PUBLIC ROUTE */}
           <Route 
             path="/login" 
             element={
@@ -146,7 +146,7 @@ function App() {
             <Route path="/legal" element={<LegalAndPrivacy />} />
             <Route path="/medical-records" element={<MedicalRecords />} />
             <Route path="/more" element={<MorePage />} />
-            {/* 🔥 NEW PROTECTED ROUTE FOR EMERGENCY SETUP */}
+            {/* NEW PROTECTED ROUTE FOR EMERGENCY SETUP */}
             <Route path="/emergency-setup" element={<EmergencySetupPage />} />
             <Route path="/profile-settings" element={<ProfileSettings />} />
             <Route path="/change-password" element={<ChangePassword />} />

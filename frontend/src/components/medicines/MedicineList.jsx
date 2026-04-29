@@ -4,7 +4,7 @@ import { cancelAllAlarms } from '../../utils/LocalNotificationManager';
 import ConfirmationModal from '../ConfirmationModal'; 
 import { useTranslation } from 'react-i18next';
 
-// 🎨 PRO ICONS (Switched completely to lucide-react)
+// PRO ICONS (Switched completely to lucide-react)
 import { 
     Pill, Clock, CalendarDays, Bell, BellOff, 
     Pencil, Trash2, Play, Pause, RefreshCw, 
@@ -55,7 +55,7 @@ const MedicineList = ({ onEdit }) => {
 
         if (today > endDay) return 'expired'; // Day has completely passed
         
-        // 🔥 IF TODAY IS THE LAST DAY, CHECK THE EXACT LAST TIME SLOT
+        // IF TODAY IS THE LAST DAY, CHECK THE EXACT LAST TIME SLOT
         if (today.getTime() === endDay.getTime()) {
              if (!medicine.times || medicine.times.length === 0) return 'expired';
              
@@ -292,7 +292,7 @@ const MedicineList = ({ onEdit }) => {
                 })}
             </div>
 
-            {/* 🔥 MODAL */}
+            {/* MODAL */}
             <ConfirmationModal 
                 isOpen={modalConfig.isOpen}
                 title={modalConfig.title}

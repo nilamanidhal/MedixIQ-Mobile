@@ -3,8 +3,8 @@ import { DownloadCloud, AlertCircle } from 'lucide-react';
 import { remoteConfig } from '../firebase';
 import { fetchAndActivate, getString, getBoolean } from "firebase/remote-config";
 
-// 🟢 CHANGE THIS STRING EVERY TIME YOU BUILD A NEW APK!
-const CURRENT_APP_VERSION = "1.5.0";
+//  CHANGE THIS STRING EVERY TIME YOU BUILD A NEW APK!
+const CURRENT_APP_VERSION = "1.6.0";
 
 const UpdatePrompt = () => {
     const [updateInfo, setUpdateInfo] = useState(null);
@@ -36,7 +36,7 @@ const UpdatePrompt = () => {
     if (!updateInfo) return null; // App is up to date, hide modal!
 
     const handleDownload = async () => {
-        // 🔥 THE FIX: Use standard location routing instead of the Custom Tab
+        //  Use standard location routing instead of the Custom Tab
         window.location.href = updateInfo.updateUrl;
     };
 

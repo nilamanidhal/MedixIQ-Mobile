@@ -38,7 +38,7 @@ const CaregiverPortal = () => {
     };
 
     if (loading) {
-        return <div className="min-h-screen flex items-center justify-center text-indigo-600 font-bold">Loading Live Data...</div>;
+        return <div className="h-[100dvh] flex items-center justify-center text-indigo-600 font-bold bg-slate-50">Loading Live Data...</div>;
     }
 
     // Quick calculations for the UI
@@ -46,11 +46,13 @@ const CaregiverPortal = () => {
     const todayLogs = data.logs.filter(l => new Date(l.date).toDateString() === new Date().toDateString());
 
     return (
-        <div className="min-h-screen bg-slate-50">
-            {/* Caregiver Header - Distinct Purple/Indigo to prevent confusion */}
-            <div className="bg-indigo-600 text-white pt-12 pb-6 px-6 rounded-b-[2rem] shadow-md sticky top-0 z-10">
+        // THE FIX: Added h-[100dvh], w-full, overflow-y-auto, and pb-32
+        <div className="h-[100dvh] w-full overflow-y-auto bg-slate-50 pb-32 font-sans">
+            
+            {/* Caregiver Header - Sticky so it stays at the top while scrolling */}
+            <div className="bg-indigo-600 text-white pt-12 pb-6 px-6 rounded-b-[2rem] shadow-md sticky top-0 z-10 flex-shrink-0 animate-in slide-in-from-top-4 duration-500">
                 <div className="flex items-center gap-3 mb-4">
-                    <button onClick={() => navigate('/family')} className="p-2 bg-indigo-500/50 rounded-full hover:bg-indigo-500 transition-colors">
+                    <button onClick={() => navigate('/family')} className="p-2 bg-indigo-500/50 rounded-full hover:bg-indigo-500 active:scale-95 transition-all">
                         <ChevronLeft size={20} />
                     </button>
                     <h1 className="text-xl font-black truncate">Viewing {patientName}</h1>
@@ -71,8 +73,9 @@ const CaregiverPortal = () => {
             </div>
 
             <div className="p-5 space-y-6">
+                
                 {/* Quick Stats */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 animate-in slide-in-from-bottom-4 duration-500">
                     <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
                         <p className="text-xs font-bold text-slate-400 mb-1">Active Meds</p>
                         <p className="text-2xl font-black text-indigo-600">{activeMeds.length}</p>
@@ -84,21 +87,23 @@ const CaregiverPortal = () => {
                 </div>
 
                 {/* Patient's Medicines */}
-                <div>
+                <div className="animate-in slide-in-from-bottom-6 duration-500 delay-100">
                     <h3 className="font-bold text-slate-800 mb-3 px-1 flex items-center gap-2">
                         <Pill className="text-indigo-500" size={18}/> Current Medications
                     </h3>
                     <div className="space-y-3">
                         {activeMeds.length === 0 ? (
-                            <p className="text-sm text-slate-500 text-center py-4">No active medications.</p>
+                            <div className="bg-white rounded-2xl border border-dashed border-slate-200 py-6 text-center">
+                                <p className="text-sm text-slate-400 font-bold">No active medications.</p>
+                            </div>
                         ) : (
                             activeMeds.map(med => (
                                 <div key={med._id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
-                                    <div>
-                                        <p className="font-bold text-slate-800 text-lg">{med.name}</p>
-                                        <p className="text-xs font-medium text-slate-500">{med.dose} • {med.condition || 'General'}</p>
+                                    <div className="min-w-0 pr-4">
+                                        <p className="font-bold text-slate-800 text-lg truncate">{med.name}</p>
+                                        <p className="text-xs font-medium text-slate-500 truncate">{med.dose} • {med.condition || 'General'}</p>
                                     </div>
-                                    <div className="text-right">
+                                    <div className="text-right flex-shrink-0">
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Schedule</p>
                                         <div className="flex flex-wrap gap-1 justify-end">
                                             {med.times.map((t, i) => (
@@ -113,25 +118,25 @@ const CaregiverPortal = () => {
                 </div>
 
                 {/* Recent Logs */}
-                <div>
+                <div className="animate-in slide-in-from-bottom-8 duration-500 delay-200">
                     <h3 className="font-bold text-slate-800 mb-3 px-1 flex items-center gap-2">
                         <Clock className="text-indigo-500" size={18}/> Recent History
                     </h3>
                     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                         {data.logs.length === 0 ? (
-                            <p className="text-sm text-slate-500 text-center py-6">No logs recorded yet.</p>
+                            <p className="text-sm text-slate-400 font-bold text-center py-6">No logs recorded yet.</p>
                         ) : (
                             <div className="divide-y divide-slate-50">
                                 {data.logs.slice(0, 10).map(log => {
                                     const isTaken = log.status === 'taken';
                                     return (
                                         <div key={log._id} className="p-4 flex items-center justify-between">
-                                            <div>
+                                            <div className="min-w-0 pr-4">
                                                 <p className="text-xs font-bold text-slate-400">{new Date(log.date).toLocaleDateString()} at {log.time}</p>
-                                                <p className="font-bold text-slate-700 mt-0.5">{log.medicineId?.name || 'Unknown Medicine'}</p>
+                                                <p className="font-bold text-slate-700 mt-0.5 truncate">{log.medicineId?.name || 'Unknown Medicine'}</p>
                                             </div>
-                                            <span className={`text-xs font-bold px-3 py-1 rounded-full ${isTaken ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                                                {log.status.toUpperCase()}
+                                            <span className={`text-[10px] flex-shrink-0 font-bold uppercase tracking-wider px-3 py-1.5 rounded-xl ${isTaken ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                                                {log.status}
                                             </span>
                                         </div>
                                     );
@@ -140,6 +145,10 @@ const CaregiverPortal = () => {
                         )}
                     </div>
                 </div>
+
+                {/*  THE SPACER: Massive invisible block to allow scrolling past bottom nav */}
+                <div className="h-32 w-full flex-shrink-0 block"></div>
+
             </div>
         </div>
     );

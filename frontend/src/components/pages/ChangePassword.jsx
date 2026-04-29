@@ -45,11 +45,11 @@ const ChangePassword = () => {
         setSaving(true);
 
         try {
-            // 🔥 2. Re-authenticate the user with their current password
+            //  2. Re-authenticate the user with their current password
             const credential = EmailAuthProvider.credential(user.email, formData.currentPassword);
             await reauthenticateWithCredential(user, credential);
 
-            // 🔥 3. If re-auth succeeds, update the password in Firebase
+            //  3. If re-auth succeeds, update the password in Firebase
             await updatePassword(user, formData.newPassword);
 
             setMessage({ type: 'success', text: 'Password changed successfully!' });

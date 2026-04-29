@@ -69,7 +69,7 @@
   },
   "auth": {
     "welcomeBack": "ସ୍ୱାଗତମ", "loginSubtitle": "ଆପଣଙ୍କର ସ୍ୱାସ୍ଥ୍ୟ ଯାତ୍ରା ଜାରି ରଖିବାକୁ ଲଗଇନ୍ କରନ୍ତୁ", "email": "ଇମେଲ୍", "password": "ପାସୱାର୍ଡ", "forgotPassword": "ପାସୱାର୍ଡ ଭୁଲିଯାଇଛନ୍ତି?", "loginBtn": "ଲଗଇନ୍", "dontHaveAccount": "ଆକାଉଣ୍ଟ ନାହିଁ?", "register": "ସାଇନ୍ ଅପ୍ କରନ୍ତୁ",
-    "createAccount": "ଆକାଉଣ୍ଟ ତିଆରି କରନ୍ତୁ", "registerSubtitle": "MedMind ସହିତ ଆପଣଙ୍କର ଯାତ୍ରା ଆରମ୍ଭ କରନ୍ତୁ", "name": "ପୂରା ନାମ", "age": "ବୟସ", "gender": "ଲିଙ୍ଗ", "passwordMin": "ପାସୱାର୍ଡ (ସର୍ବନିମ୍ନ 6 ଅକ୍ଷର)", "confirmPassword": "ପାସୱାର୍ଡ ନିଶ୍ଚିତ କରନ୍ତୁ", "alreadyHaveAccount": "ଆକାଉଣ୍ଟ ଅଛି କି?", "login": "ଲଗଇନ୍"
+    "createAccount": "ଆକାଉଣ୍ଟ ତିଆରି କରନ୍ତୁ", "registerSubtitle": "MedixIQ ସହିତ ଆପଣଙ୍କର ଯାତ୍ରା ଆରମ୍ଭ କରନ୍ତୁ", "name": "ପୂରା ନାମ", "age": "ବୟସ", "gender": "ଲିଙ୍ଗ", "passwordMin": "ପାସୱାର୍ଡ (ସର୍ବନିମ୍ନ 6 ଅକ୍ଷର)", "confirmPassword": "ପାସୱାର୍ଡ ନିଶ୍ଚିତ କରନ୍ତୁ", "alreadyHaveAccount": "ଆକାଉଣ୍ଟ ଅଛି କି?", "login": "ଲଗଇନ୍"
   },
   "more": {
     "safety": "ସୁରକ୍ଷା ଓ ଜରୁରୀକାଳୀନ", "medicalRecords": "ମେଡିକାଲ୍ ରେକର୍ଡ", "account": "ଆକାଉଣ୍ଟ ଓ ସପୋର୍ଟ", "logout": "ଲଗଆଉଟ୍"

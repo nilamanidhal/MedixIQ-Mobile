@@ -127,7 +127,7 @@ const handleSave = async () => {
             setQrToken(res.data.profile.token);
         }
 
-        // ✅ Flat structure mein save karo — ye Java padh sakta hai
+        // Flat structure mein save karo — ye Java padh sakta hai
         const nativeData = {
             name: cleanData.name || 'Unknown',
             bloodGroup: cleanData.bloodGroup || 'Unknown',
@@ -141,13 +141,13 @@ const handleSave = async () => {
 
         console.log("Saving native data:", JSON.stringify(nativeData));
 
-        // ✅ Preferences mein save karo
+        //  Preferences mein save karo
         await Preferences.set({
             key: 'emergency_profile_native',
             value: JSON.stringify(nativeData)
         });
 
-        // ✅ Native Java mein bhi save karo
+        //  Native Java mein bhi save karo
         await saveEmergencyDataForNative(cleanData);
 
         alert("Emergency Profile Saved!");
@@ -164,9 +164,9 @@ const handleSave = async () => {
     if (loading) return <LoadingSpinner text="Loading Profile..." />;
 
     return (
-        <div className="min-h-screen bg-slate-50 pb-24">
+        <div className="h-[100dvh] w-full overflow-y-auto bg-slate-50 pb-24 font-sans">
             {/* Header */}
-            <div className="bg-red-600 px-6 pt-12 pb-6 shadow-sm sticky top-0 z-20">
+            <div className="bg-red-600 flex-shrink-0 px-6 pt-14 pb-6 shadow-sm sticky top-0 z-20">
                 <div className="flex items-center gap-3 text-white mb-2">
                     <button onClick={() => navigate(-1)} className="p-2 -ml-2 hover:bg-red-700 rounded-full transition-colors">
                         <ArrowLeft size={24} />
@@ -280,6 +280,9 @@ const handleSave = async () => {
                     {saving ? <LoadingSpinner size={24} color="white" /> : <><Save /> Save Emergency Profile</>}
                 </button>
             </div>
+
+                    <div className="h-32 w-full flex-shrink-0 block"></div>
+
         </div>
     );
 };

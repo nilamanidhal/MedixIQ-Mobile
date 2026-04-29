@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">medmind</string>
-    <string name="title_activity_main">medmind</string>
+    <string name="app_name">MedixIQ</string>
+    <string name="title_activity_main">MedixIQ</string>
     <string name="package_name">com.medmind.app</string>
     <string name="custom_url_scheme">com.medmind.app</string>
 </resources>

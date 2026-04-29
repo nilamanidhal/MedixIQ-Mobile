@@ -105,10 +105,10 @@ const MorePage = () => {
   ];
 
   return (
-    <div className="bg-slate-50 min-h-full pb-24 font-sans">
+    <div className="h-[100dvh] w-full overflow-y-auto bg-slate-50 pb-32 font-sans">
       
-      {/* 🟢 HEADER PROFILE CARD */}
-      <div className="bg-green-200 px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-sm sticky top-0 z-20">
+      {/*  HEADER PROFILE CARD */}
+      <div className="flex-shrink-0 bg-green-200 px-6 pt-14 pb-8 rounded-b-[2.5rem] shadow-sm sticky top-0 z-20">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center text-2xl font-extrabold text-green-600">
             {user?.name?.charAt(0).toUpperCase() || 'U'}
@@ -124,7 +124,7 @@ const MorePage = () => {
 
       <div className="px-5 mt-6 space-y-6 max-w-lg mx-auto">
         
-        {/* 📋 MENU GROUPS */}
+        {/*  MENU GROUPS */}
         {menuGroups.map((group, groupIndex) => (
           <div key={groupIndex}>
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-2">
@@ -176,7 +176,7 @@ const MorePage = () => {
           </div>
         ))}
 
-        {/* 🔴 LOGOUT BUTTON */}
+        {/*  LOGOUT BUTTON */}
         <div className="pt-4">
           <button 
             onClick={() => setShowLogoutConfirm(true)} 
@@ -221,187 +221,10 @@ const MorePage = () => {
                     </div>
                 </div>
             )}
-
+  <div className="h-32 w-full flex-shrink-0 block"></div>
 
     </div>
   );
 };
 
 export default MorePage;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import React, { useState } from 'react';
-// import { useAuth } from '../../contexts/AuthContext'; 
-// import { useNavigate } from 'react-router-dom';
-// import ConfirmationModal from '../ConfirmationModal';
-// import { useSentinelContext } from '../../contexts/SentinelContext';
-
-// const MorePage = () => {
-//   const { user, logout } = useAuth();
-//   const navigate = useNavigate();
-//   const { isEnabled, toggleSentinel, simulateAccident } = useSentinelContext();
-
-//   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-
-//   const menuItems = [
-//     // 🚨 ADDED EMERGENCY PROFILE
-//     { 
-//       label: 'Emergency Profile & QR', 
-//       icon: '🚨', 
-//       desc: 'Setup Medical ID & Wallet Card',
-//       path: '/emergency-setup'
-//     },
-//     // 🛡️ ADDED SENTINEL MODE (Notice type: 'toggle')
-//     { 
-//       label: 'Sentinel Mode', 
-//       icon: '🛡️', 
-//       desc: 'Auto-detect accidents & send SMS',
-//       type: 'toggle',
-//       value: isEnabled,
-//       action: (e) => toggleSentinel(e.target.checked)
-//     },
-//     { 
-//       label: 'TEST ACCIDENT OVERLAY', 
-//       icon: '⚠️', 
-//       desc: 'Simulate a crash to test UI & SMS',
-//       action: () => simulateAccident() 
-//     },
-//     { 
-//       label: 'Prescriptions', 
-//       icon: '📄', 
-//       desc: 'Upload and manage scripts',
-//       path: '/medical-records'
-//     },
-//     { 
-//       label: 'History Logs', 
-//       icon: '📜', 
-//       desc: 'View past medication logs',
-//       path: '/history'
-//     },
-//     { 
-//       label: 'Profile Settings', 
-//       icon: '👤', 
-//       desc: 'Update personal details',
-//       path: '/profile-settings'
-//     },
-//     { 
-//       label: 'Contact Support', 
-//       icon: '✉️', 
-//       desc: 'Get help with the app',
-//       path: '/contact'
-//     }
-//   ];
-
-//   return (
-//     <div className="bg-gray-50 min-h-full pb-0">
-//       {/* Header Profile Card */}
-//       <div className="bg-green-200 px-6 pt-10 pb-6 rounded-b-[2.5rem] shadow-sm mb-0 sticky top-0 z-20 border-b border-slate-100">
-//         <div className="flex items-center space-x-4">
-//           <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-2xl font-bold text-blue-600">
-//             {user?.name?.charAt(0).toUpperCase() || 'U'}
-//           </div>
-//           <div>
-//             <h2 className="text-xl font-bold text-gray-900">{user?.name || 'User'}</h2>
-//             <p className="text-gray-500 text-sm">{user?.email}</p>
-//           </div>
-//         </div>
-//       </div>
-
-//       {/* Menu List */}
-//       <div className="bg-white shadow-sm rounded-4xl m-2">
-//         {menuItems.map((item, index) => (
-//           <div key={index}>
-//             <div 
-//               onClick={() => {
-//                 if (item.path) navigate(item.path);
-//                 else if (item.action && item.type !== 'toggle') item.action();
-//               }}
-//               className={`w-full flex items-center p-4 transition-colors text-left ${item.type !== 'toggle' ? 'hover:bg-gray-50 cursor-pointer' : ''}`}
-//             >
-//               <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mr-4 text-xl shrink-0">
-//                 {item.icon}
-//               </div>
-              
-//               <div className="flex-1 pr-4">
-//                 <h3 className={`font-medium ${item.type === 'toggle' && item.value ? 'text-red-600' : 'text-gray-900'}`}>
-//                   {item.label}
-//                 </h3>
-//                 <p className="text-xs text-gray-500">{item.desc}</p>
-//               </div>
-
-//               {/* 🟢 TOGGLE OR CHEVRON LOGIC */}
-//               {item.type === 'toggle' ? (
-//                 <label className="relative inline-flex items-center cursor-pointer shrink-0">
-//                   <input 
-//                     type="checkbox" 
-//                     className="sr-only peer" 
-//                     checked={item.value || false} 
-//                     onChange={item.action} 
-//                   />
-//                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
-//                 </label>
-//               ) : (
-//                 <span className="text-gray-400 font-bold text-xl shrink-0">›</span>
-//               )}
-
-//             </div>
-//             {/* Divider line except for last item */}
-//             {index < menuItems.length - 1 && <hr className="border-gray-100 ml-16" />}
-//           </div>
-//         ))}
-//       </div>
-
-//       {/* Logout Button */}
-//       <div className="px-4 mt-6">
-//         <button 
-//           onClick={() => setShowLogoutConfirm(true)} 
-//           className="w-full bg-white text-red-500 font-bold py-4 rounded-2xl border border-red-100 shadow-sm hover:bg-red-50 active:scale-95 transition-all flex items-center justify-center gap-2"
-//         >
-//           <span>Log Out</span>
-//         </button>
-//       </div>
-      
-//       <div className="text-center mt-4 pb-24 text-xs text-gray-400">
-//         MedixIQ v1.0.0
-//       </div>
-
-//       {/* CONFIRMATION MODAL */}
-//       <ConfirmationModal
-//         isOpen={showLogoutConfirm}
-//         title="Confirm Logout?"
-//         message="Logging out will clear unsaved local data. Please ensure you are online to sync before leaving."
-//         confirmText="Yes, Logout"
-//         cancelText="Cancel"
-//         isDanger={true}
-//         onConfirm={() => {
-//             setShowLogoutConfirm(false);
-//             logout(); 
-//         }}
-//         onCancel={() => setShowLogoutConfirm(false)}
-//       />
-//     </div>
-//   );
-// };
-
-// export default MorePage;

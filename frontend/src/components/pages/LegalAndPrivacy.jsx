@@ -76,9 +76,9 @@ const LegalAndPrivacy = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans pb-10">
+    <div className="h-[100dvh] w-full overflow-y-auto bg-slate-50 pb-10 font-sans">
       {/* HEADER */}
-      <div className="bg-white px-4 pt-12 pb-4 shadow-sm sticky top-0 z-20 flex items-center gap-3">
+      <div className="bg-white flex-shrink-0 px-4 pt-14 pb-4 shadow-sm sticky top-0 z-20 flex items-center gap-3">
         <button onClick={() => navigate(-1)} className="p-2 -ml-2 bg-slate-50 text-slate-600 rounded-full hover:bg-slate-100 active:scale-95 transition-all">
           <ArrowLeft size={20} />
         </button>
@@ -123,6 +123,9 @@ const LegalAndPrivacy = () => {
           ))}
         </div>
       </div>
+
+<div className="h-32 w-full flex-shrink-0 block"></div>
+
     </div>
   );
 };

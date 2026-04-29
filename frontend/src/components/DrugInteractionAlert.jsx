@@ -4,7 +4,7 @@ import { AlertTriangle, CheckCircle, WifiOff, Info } from 'lucide-react';
 const DrugInteractionAlert = ({ result, onDismiss }) => {
     if (!result) return null;
 
-    // ✅ SAFE
+    // SAFE
     if (result.status === 'SAFE') {
         return (
             <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm">
@@ -14,7 +14,7 @@ const DrugInteractionAlert = ({ result, onDismiss }) => {
         );
     }
 
-    // ✅ ERROR / Offline
+    // ERROR / Offline
     if (result.status === 'ERROR') {
         return (
             <div className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 text-sm">
@@ -24,7 +24,7 @@ const DrugInteractionAlert = ({ result, onDismiss }) => {
         );
     }
 
-    // ✅ DANGER — supports multiple interactions
+    // DANGER — supports multiple interactions
     if (result.status === 'DANGER') {
         const interactions = result.interactions || [];
         return (

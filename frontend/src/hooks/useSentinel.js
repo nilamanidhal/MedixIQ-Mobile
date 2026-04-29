@@ -28,7 +28,7 @@ export const useSentinel = () => {
                 if (ageSeconds < 30) {
                     setAccidentDetected(true);
                 } else {
-                    console.log("⏭️ Stale accident ignored");
+                    console.log("Stale accident ignored");
                 }
                 await Preferences.remove({ key: 'pending_accident' });
                 await Preferences.remove({ key: 'accident_timestamp' });
@@ -63,7 +63,7 @@ export const useSentinel = () => {
         try {
             if (Capacitor.isNativePlatform() && SentinelNative?.startService) {
                 await SentinelNative.startService();
-                console.log("✅ Sentinel native service started");
+                console.log(" Sentinel native service started");
             }
         } catch (e) {
             console.error("Sentinel start failed", e);
@@ -80,7 +80,7 @@ export const useSentinel = () => {
         }
     };
 
-    // ✅ Helper — emergency data Preferences se padho
+    //  Helper — emergency data Preferences se padho
     const getEmergencyDataFromPrefs = async () => {
         try {
             const { value } = await Preferences.get({ key: 'emergency_profile_native' });
@@ -95,7 +95,7 @@ export const useSentinel = () => {
         return {};
     };
 
-    // ✅ FIXED saveEmergencyDataForNative — data properly build karo
+    //  FIXED saveEmergencyDataForNative — data properly build karo
     const saveEmergencyDataForNative = async (directData = null) => {
         try {
             const { value: smsVal } = await Preferences.get({ key: 'sentinel_sms_enabled' });
@@ -122,9 +122,9 @@ export const useSentinel = () => {
                 // Preferences se padho
                 const existing = await getEmergencyDataFromPrefs();
 
-                // ✅ Check karo data valid hai ya nahi
+                // Check karo data valid hai ya nahi
                 if (!existing || !existing.name || existing.name === 'Unknown') {
-                    console.warn("⚠️ No valid emergency profile in Preferences");
+                    console.warn(" No valid emergency profile in Preferences");
                     return;
                 }
 
@@ -140,7 +140,7 @@ export const useSentinel = () => {
 
             console.log("Saving to native:", JSON.stringify(data));
 
-            // ✅ Preferences mein bhi update karo with smsEnabled
+            //  Preferences mein bhi update karo with smsEnabled
             await Preferences.set({
                 key: 'emergency_profile_native',
                 value: JSON.stringify(data)
@@ -148,7 +148,7 @@ export const useSentinel = () => {
 
             if (Capacitor.isNativePlatform() && SentinelNative?.saveEmergencyData) {
                 await SentinelNative.saveEmergencyData(data);
-                console.log("✅ Saved to native SharedPreferences");
+                console.log(" Saved to native SharedPreferences");
             }
         } catch (e) {
             console.error("saveEmergencyDataForNative failed:", e);
@@ -158,26 +158,26 @@ export const useSentinel = () => {
     const toggleSentinel = async (state) => {
         if (state && Capacitor.isNativePlatform()) {
 
-            // ✅ Pehle check karo emergency data valid hai ya nahi
+            //  Pehle check karo emergency data valid hai ya nahi
         const { value } = await Preferences.get({ 
             key: 'emergency_profile_native' 
         });
         
         if (!value) {
-            alert("⚠️ Please save your Emergency Profile first before enabling Sentinel Mode.");
+            alert(" Please save your Emergency Profile first before enabling Sentinel Mode.");
             return;
         }
         
         const parsed = JSON.parse(value);
         if (!parsed.name || parsed.name === 'Unknown' || !parsed.emergencyPhone) {
             alert(
-                "⚠️ Incomplete Emergency Profile!\n\n" +
+                "Incomplete Emergency Profile!\n\n" +
                 "Please go to Emergency Profile, fill your details, and save before enabling Sentinel Mode."
             );
             return;
         }
 
-            // ✅ Fix 1: GPS check — sirf permission check karo, timeout pe block mat karo
+            // Fix 1: GPS check — sirf permission check karo, timeout pe block mat karo
             try {
                 const { Geolocation } = await import('@capacitor/geolocation');
                 const permStatus = await Geolocation.checkPermissions();
@@ -194,16 +194,16 @@ export const useSentinel = () => {
                     }
                 }
 
-                // ✅ Permission granted — GPS on hai ya nahi sirf warn karo, block mat karo
+                //  Permission granted — GPS on hai ya nahi sirf warn karo, block mat karo
                 // (timeout error pe confirm nahi dikhana — sirf log karo)
-                console.log("✅ Location permission granted");
+                console.log(" Location permission granted");
 
             } catch (e) {
                 console.log("Location check error:", e);
                 // Error pe bhi continue karo
             }
 
-            // ✅ SMS preference
+            // SMS preference
             const wantsSms = window.confirm(
                 "🚨 Emergency SMS Setting\n\n" +
                 "If accident detected, automatically send SMS to emergency contact?\n\n" +
@@ -225,7 +225,7 @@ export const useSentinel = () => {
         });
 
         if (state) {
-            await saveEmergencyDataForNative(); // ✅ Ye sahi data bhejega
+            await saveEmergencyDataForNative(); //  Ye sahi data bhejega
             await startNativeService();
         } else {
             await stopNativeService();

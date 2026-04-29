@@ -16,7 +16,7 @@ const ForgotPassword = () => {
         setStatus({ type: '', message: '' });
 
         try {
-            // 🔥 THIS IS THE MAGIC FIREBASE FUNCTION
+            // THIS IS THE MAGIC FIREBASE FUNCTION
             await sendPasswordResetEmail(auth, email);
             
             setStatus({ 

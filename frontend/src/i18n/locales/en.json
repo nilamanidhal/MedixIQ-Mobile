@@ -69,7 +69,7 @@
   },
   "auth": {
     "welcomeBack": "Welcome Back", "loginSubtitle": "Sign in to continue your health journey", "email": "Email Address", "password": "Password", "forgotPassword": "Forgot password?", "loginBtn": "Sign In", "dontHaveAccount": "Don't have an account?", "register": "Sign up",
-    "createAccount": "Create Account", "registerSubtitle": "Start your journey with MedMind", "name": "Full Name", "age": "Age", "gender": "Gender", "passwordMin": "Password (min 6 chars)", "confirmPassword": "Confirm Password", "alreadyHaveAccount": "Already have an account?", "login": "Log in"
+    "createAccount": "Create Account", "registerSubtitle": "Start your journey with MedixIQ", "name": "Full Name", "age": "Age", "gender": "Gender", "passwordMin": "Password (min 6 chars)", "confirmPassword": "Confirm Password", "alreadyHaveAccount": "Already have an account?", "login": "Log in"
   },
   "more": {
     "safety": "Safety & Emergency", "medicalRecords": "Medical Records", "account": "Account & Support", "logout": "Log Out"

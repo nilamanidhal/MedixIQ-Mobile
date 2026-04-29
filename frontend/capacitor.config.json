@@ -1,6 +1,6 @@
 {
   "appId": "com.medmind.app",
-  "appName": "medmind",
+  "appName": "MedixIQ",
   "webDir": "dist",
   "bundledWebRuntime": false,
   "server": {

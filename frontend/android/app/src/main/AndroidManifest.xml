@@ -23,8 +23,8 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
-<uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <application
         android:allowBackup="true"
@@ -38,22 +38,17 @@
             android:name="com.medmind.app.SentinelService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="location" />
+            android:foregroundServiceType="location"
+        />
 
-        <receiver
-            android:name="com.medmind.app.BootReceiver"
-            android:enabled="true"
-            android:exported="true">
+        <receiver android:name="com.medmind.app.BootReceiver" android:enabled="true" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
         </receiver>
 
-        
-        <receiver
-    android:name=".EmergencyReceiver"
-    android:exported="false" />
+        <receiver android:name=".EmergencyReceiver" android:exported="false" />
 
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
@@ -77,13 +72,13 @@
         </provider>
 
         <activity
-    android:name=".EmergencyAlertActivity"
-    android:exported="false"
-    android:showOnLockScreen="true"
-    android:turnScreenOn="true"
-    android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
-    android:launchMode="singleTop"
-    android:excludeFromRecents="true" />
-    
+            android:name=".EmergencyAlertActivity"
+            android:exported="false"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
+            android:launchMode="singleTop"
+            android:excludeFromRecents="true"
+        />
     </application>
 </manifest>
