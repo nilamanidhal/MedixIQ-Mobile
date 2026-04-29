@@ -55,7 +55,7 @@ Medmind uses a modern Full-Stack architecture wrapped for mobile using Ionic Cap
   <img src="./screenshots/medixiq dasboard.jpeg" alt="Dashboard" width="200" />
   <img src="./screenshots/medixiq med list.jpeg" alt="medicine management" width="200" />
   <img src="./screenshots/medixiq ai start.jpeg" alt="AI Feature" width="200"/>
-  <img src="./screenshots/medixiq history.jpeg" alt="Log History" width="200" />
+  <img src="./screenshots/medixai history.jpeg" alt="Log History" width="200" />
   <img src="./screenshots/medixiq presciption.jpeg" alt="Prescription Storage" width="200" />
   <img src="./screenshots/medixiq tracking.jpeg" alt="Med & Health Tracking" width="200" />
   <img src="./screenshots/medixiq emergency alert.jpeg" alt="Accident Detection" width="200" />
