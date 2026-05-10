@@ -74,7 +74,7 @@ Medmind uses a modern Full-Stack architecture wrapped for mobile using Ionic Cap
 
 1. **Clone the repository**
    ```bash
-   git clone [https://github.com/yourusername/MedMind.git](https://github.com/yourusername/MedMind.git)
+   git clone https://github.com/nilamanidhal/MedixIQ-Mobile.git
    cd MedMind
 
 
