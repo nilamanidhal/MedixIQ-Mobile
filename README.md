@@ -43,7 +43,7 @@ Medmind uses a modern Full-Stack architecture wrapped for mobile using Ionic Cap
 
 * **Frontend:** React.js, Tailwind CSS, Recharts (for data visualization), Lucide React (Icons).
 * **Backend:** Node.js, Express.js, JWT Authentication.
-* **Database:** PostgreSQL for robust, relational data integrity.
+* **Database:** MongoDB for flexible, document-based data storage.
 * **Mobile Runtime:** Capacitor JS.
 * **Native Android Components:** Custom Java implementations (`SentinelService.java`, `BootReceiver.java`, `EmergencyReceiver.java`) for unbreakable background processing.
 * **Offline Sync Engine:** Custom queue-based sync utilizing `@capacitor/network`.
@@ -68,7 +68,7 @@ Medmind uses a modern Full-Stack architecture wrapped for mobile using Ionic Cap
 ### Prerequisites
 * Node.js (v18+)
 * Android Studio (for mobile emulation/building)
-* PostgreSQL database
+* MongoDB database
 
 ### Installation
 
@@ -83,7 +83,7 @@ Medmind uses a modern Full-Stack architecture wrapped for mobile using Ionic Cap
 Bash
 cd backend
 npm install
-# Configure your .env file with Postgres URI, JWT Secret, and AI API keys
+# Configure your .env file with MongoDB URI, JWT Secret, and AI API keys
 npm run start
 Frontend / Mobile Setup
 
