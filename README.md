@@ -1,4 +1,5 @@
 # 💊 MedixIQ: Proactive Health & Emergency Response Platform
+# Live at: https://medixiq.netlify.app/
 
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![Capacitor](https://img.shields.io/badge/Capacitor-119EFF?style=for-the-badge&logo=Capacitor&logoColor=white)
